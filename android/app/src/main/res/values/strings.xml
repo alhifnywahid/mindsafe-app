@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">Mindsafe monitors browser URLs to track your web activity. This service reads the URL bar from browsers to provide activity insights.</string>
+</resources>
