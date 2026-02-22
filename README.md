@@ -1,189 +1,363 @@
-# Mindsafe App
+# 🛡️ MindSafe
 
-A privacy-focused Android application for monitoring web domain access patterns using local VPN technology.
+**MindSafe** adalah aplikasi mobile berbasis **Flutter** yang dirancang untuk memantau dan mengklasifikasikan aktivitas browsing internet secara real-time menggunakan teknologi **Local VPN** dan **Accessibility Service**. Aplikasi ini dikembangkan sebagai bagian dari **penelitian Tugas Akhir (Skripsi)**.
 
-## Features
+> *"Menjaga pikiran tetap aman dari konten berbahaya di internet"*
 
-- **VPN-Based Monitoring**: Uses Android VpnService to intercept and log domain access
-- **Privacy First**: Only stores domain names, no URLs or page content
-- **Domain Classification**: Categorizes domains as safe, mixed, adult, or unknown
-- **Statistics & Insights**: View usage patterns and trends
-- **Google Sign-In**: Easy authentication with admin role support
-- **Offline Support**: Works without internet, syncs when online
-- **Light & Dark Mode**: Beautiful modern UI with theme support
+---
 
-## Tech Stack
+## 📋 Daftar Isi
 
-- **Flutter** & **Dart**
-- **GetX** - State management and routing
-- **Firebase** - Authentication and Cloud Firestore
-- **Hive** - Local storage
-- **Kotlin** - Android VPN Service
-- **fl_chart** - Statistics visualization
+- [Tentang Proyek](#-tentang-proyek)
+- [Fitur Utama](#-fitur-utama)
+- [Tech Stack](#-tech-stack)
+- [Arsitektur Proyek](#-arsitektur-proyek)
+- [Cara Kerja](#-cara-kerja)
+- [Instalasi](#-instalasi)
+- [Konfigurasi Firebase](#-konfigurasi-firebase)
+- [Blocklist Assets](#-blocklist-assets)
+- [Firestore Security Rules](#-firestore-security-rules)
+- [FAQ](#-faq)
+- [Troubleshooting](#-troubleshooting)
+- [Lisensi](#-lisensi)
 
-## Getting Started
+---
 
-### Prerequisites
+## 📖 Tentang Proyek
 
-- Flutter SDK (>=3.8.1)
-- Android Studio or VS Code with Flutter extensions
-- Firebase account
-- Android device or emulator (API 21+)
+MindSafe merupakan aplikasi **internet safety monitoring** yang bertujuan untuk:
 
-### Firebase Setup
+1. **Memantau aktivitas browsing** pengguna melalui DNS query interception (Local VPN) dan URL capture (Accessibility Service)
+2. **Mengklasifikasikan domain** yang diakses ke dalam kategori: safe, adult, gambling, phishing, malware, cryptojacking, hacking, dating, warez, DDoS, dan dangerous
+3. **Memberikan insight** dan statistik tentang kebiasaan browsing pengguna
+4. **Mengirim notifikasi** ketika domain berbahaya terdeteksi
 
-**IMPORTANT**: The app currently uses a placeholder Firebase configuration. You MUST set up your own Firebase project:
+Aplikasi ini dikembangkan untuk keperluan **penelitian Tugas Akhir** di bidang keamanan internet dan kesadaran digital.
 
-1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Create a new project called "Mindsafe" (or your preferred name)
-3. Add an Android app with package name: `com.example.mindsafe_flutter`
-4. Download `google-services.json`
-5. Replace the placeholder file at:
-   ```
-   android/app/google-services.json
-   ```
-6. Enable **Authentication** → **Google Sign-In** in Firebase Console
-7. Enable **Firestore Database** in Firebase Console
+---
 
-### Installation
+## ✨ Fitur Utama
 
-1. **Clone the repository** (if applicable) or navigate to the project directory
+### 👤 Fitur User
 
-2. **Install dependencies**:
-   ```bash
-   flutter pub get
-   ```
+| Fitur | Deskripsi |
+|-------|-----------|
+| 🔒 **VPN Monitoring** | Monitoring DNS query secara real-time menggunakan Local VPN |
+| 🌐 **URL Capture** | Menangkap URL lengkap dari browser menggunakan Accessibility Service |
+| 📊 **Dashboard** | Tampilan statistik harian, mingguan, dan tren aktivitas browsing |
+| 📈 **History** | Riwayat browsing dengan chart (daily/weekly/monthly) dan kalender interaktif |
+| 💡 **Insights** | Analisis pola browsing dan rekomendasi kebiasaan digital sehat |
+| 🔔 **Notifikasi** | Peringatan lokal saat domain berbahaya terdeteksi |
+| 🎨 **Tema** | Light mode, dark mode, atau mengikuti sistem |
+| 🌍 **Multi-bahasa** | Dukungan Bahasa Indonesia dan English |
+| ☁️ **Cloud Sync** | Sinkronisasi data ke Firebase Firestore |
+| 🗑️ **Data Retention** | Pengaturan retensi data (7, 30, atau 90 hari) |
+| 📤 **Share & Feedback** | Bagikan aplikasi dan kirim masukan |
+| 📱 **Onboarding** | Panduan awal penggunaan aplikasi |
 
-3. **Generate Hive adapters**:
-   ```bash
-   dart run build_runner build --delete-conflicting-outputs
-   ```
+### 🔧 Fitur Admin
 
-4. **Run the app**:
-   ```bash
-   flutter run
-   ```
+| Fitur | Deskripsi |
+|-------|-----------|
+| 📊 **Dashboard Admin** | Statistik sistem: total user, total domain, aktivitas hari ini, breakdown kategori |
+| 📝 **Domain Rules** | Kelola aturan klasifikasi domain secara kustom (tambah, edit, hapus rule) |
+| 🚫 **Skip Domains** | Daftar domain yang diabaikan saat monitoring (termasuk semua subdomain) |
+| 📢 **Push Notification** | Kirim notifikasi global ke semua pengguna (info, update, warning, promo) |
+| 📋 **Audit Log** | Catatan aktivitas admin |
+| 🔄 **Version Management** | Kelola versi aplikasi dan force update |
 
-## Project Structure
+---
+
+## 🛠️ Tech Stack
+
+| Teknologi | Fungsi |
+|-----------|--------|
+| **Flutter** & **Dart** | Framework UI cross-platform |
+| **Kotlin** | Android native VPN Service & Accessibility Service |
+| **GetX** | State management, routing, dependency injection, dan lokalisasi |
+| **Firebase Auth** | Autentikasi via Google Sign-In |
+| **Cloud Firestore** | Database cloud untuk sync data dan admin panel |
+| **Hive** | Local database (NoSQL) untuk penyimpanan offline |
+| **ForUI** | UI component library |
+| **fl_chart** | Visualisasi chart dan statistik |
+| **table_calendar** | Widget kalender interaktif |
+| **flutter_local_notifications** | Notifikasi lokal |
+| **UT1 Blocklist** | Dataset klasifikasi domain dari Université Toulouse 1 Capitole |
+
+---
+
+## 🏗️ Arsitektur Proyek
 
 ```
 lib/
 ├── app/
-│   ├── bindings/          # Dependency injection
-│   └── controllers/       # Business logic controllers
+│   ├── bindings/              # Dependency injection (GetX)
+│   └── controllers/           # Business logic controllers (VPN, dll)
 ├── core/
-│   ├── constants/         # Colors, spacing, text styles
-│   └── theme/            # Light and dark themes
+│   ├── constants/             # Warna, spacing, text styles
+│   ├── localization/          # Terjemahan EN & ID
+│   ├── theme/                 # Light & dark theme
+│   ├── utils/                 # Utility functions
+│   └── widgets/               # Reusable widgets (AppCard, AppBottomSheet, dll)
 ├── data/
-│   ├── models/           # Hive models
-│   ├── repositories/     # Data layer
-│   └── services/         # VPN, Auth, Database services
-├── routes/               # App navigation
-├── screens/              # UI screens
-├── widgets/              # Reusable components
-└── main.dart             # App entry point
+│   ├── models/                # Model data (Hive adapters)
+│   ├── repositories/          # Firestore repository
+│   └── services/              # Auth, VPN, Database, Classifier, Sync, Notification
+├── routes/                    # App routing & navigation
+├── screens/
+│   ├── admin/                 # Admin panel (Dashboard, Rules, Audit, Notif)
+│   ├── auth/                  # Login & registrasi
+│   ├── history/               # Riwayat browsing (Overview & Calendar)
+│   ├── home/                  # Home screen dengan monitoring card
+│   ├── insights/              # Analisis dan insight browsing
+│   ├── navigation/            # Bottom navigation
+│   ├── onboarding/            # Onboarding pengguna baru
+│   ├── settings/              # Pengaturan & about
+│   └── splash/                # Splash screen
+├── widgets/                   # Shared widgets
+└── main.dart                  # Entry point aplikasi
 
-android/
-└── app/src/main/kotlin/com/example/mindsafe_flutter/
-    ├── LocalVpnService.kt   # VPN implementation
-    └── MainActivity.kt       # Platform channel bridge
+android/app/src/main/kotlin/com/example/mindsafe_flutter/
+├── LocalVpnService.kt         # Implementasi VPN untuk intercept DNS query
+├── BrowserMonitorService.kt   # Accessibility Service untuk capture URL
+└── MainActivity.kt            # Platform channel bridge (Flutter ↔ Kotlin)
 ```
-
-## How It Works
-
-### VPN Monitoring
-
-1. **LocalVpnService.kt**: Establishes a local VPN connection using Android's VpnService API
-2. **Packet Capture**: Intercepts network packets to extract DNS queries and TLS SNI
-3. **Domain Extraction**: Parses packets to identify target domains
-4. **Event Streaming**: Sends domain events to Flutter via EventChannel
-5. **Privacy Protection**: 
-   - Does NOT decrypt HTTPS traffic
-   - Only captures domain names
-   - Optional domain hashing for extra privacy
-
-### Data Flow
-
-```
-User browses → VPN intercepts packet → Extract domain →
-Send to Flutter → Classify domain → Store in Hive →
-Update statistics → (Optional) Sync to Firestore
-```
-
-### Admin Features
-
-Users with email **jackkolor69@gmail.com** automatically get admin access:
-- View aggregate  statistics
-- Manage domain classification rules
-- Enable/disable users
-- View audit logs
-
-Admin features can be accessed from the Admin tab (visible only to admins).
-
-## Configuration
-
-### Privacy Settings
-
-Users can configure:
-- **Data Retention**: 7, 30, or 90 days
-- **Privacy Mode**: Store raw domains or SHA-256 hashes
-- **Theme**: Light, Dark, or System
-- **Notifications**: Enable/disable
-
-### Domain Classification
-
-Rules are stored locally in Hive and can be managed by admins:
-- **Pattern**: Exact match or regex
-- **Category**: adult, mixed, safe, unknown
-- **Priority**: Higher priority rules checked first
-
-## Development Notes
-
-### Known Limitations
-
-1. **DNS only**: Currently captures DNS queries. TLS SNI extraction is partially implemented
-2. **IPv4 only**: IPv6 support not yet implemented
-3. **Simple heuristics**: Domain classification uses basic pattern matching
-
-### Future Improvements
-
-- [ ] Complete TLS SNI extraction
-- [ ] ML-based domain classification
-- [ ] Weekly/monthly reports
-- [ ] Export data functionality
-- [ ] Multi-device sync
-
-## Troubleshooting
-
-### App won't build
-- Ensure you've replaced the placeholder `google-services.json` with a real Firebase config
-- Run `flutter clean` and `flutter pub get`
-- Check that Android SDK and Flutter SDK are properly installed
-
-### VPN permission denied
-- Android requires explicit user consent for VPN
-- System will show a permission dialog on first VPN start
-- If denied, user must restart VPN from the app
-
-### Domains not being captured
-- Ensure VPN permission is granted
-- Check VPN status indicator on home screen
-- Look for notification showing "VPN Active"
-- Try browsing a few websites and wait a few seconds
-
-### Build errors
-- Run `dart run build_runner clean`
-- Then `dart run build_runner build --delete-conflicting-outputs`
-- If still failing, delete `.dart_tool` folder and run `flutter pub get`
-
-## License
-
-This project is for educational purposes.
-
-## Contact
-
-For admin access or support, contact the developer.
 
 ---
 
-**Remember**: This app prioritizes your privacy. It ONLY monitors domain names, never page content or personal data.
+## ⚙️ Cara Kerja
+
+### VPN-Based DNS Monitoring
+
+```
+User browsing → LocalVpnService intercept paket →
+Ekstraksi DNS query → Kirim ke Flutter via EventChannel →
+DomainClassifier klasifikasi domain → Simpan ke Hive →
+Update statistik → (Opsional) Sync ke Firestore
+```
+
+1. **LocalVpnService.kt** membuat koneksi VPN lokal menggunakan Android VpnService API
+2. **Packet Capture** menangkap paket jaringan untuk mengekstrak DNS query
+3. **Domain Classification** menggunakan UT1 blocklist dan custom rules dari admin
+4. **Event Streaming** mengirim data domain ke Flutter melalui EventChannel
+
+### URL Capture (Accessibility Service)
+
+1. **BrowserMonitorService.kt** membaca URL dari address bar browser
+2. Mendukung Chrome, Firefox, Edge, Opera, Brave, dan browser lainnya
+3. Memberikan tracking yang lebih detail di level halaman
+
+### Klasifikasi Domain
+
+Domain diklasifikasikan melalui 3 tahap:
+1. **Custom Rules** — Aturan kustom dari admin (prioritas tertinggi)
+2. **Skip Domains** — Domain yang diabaikan
+3. **UT1 Blocklist** — Dataset dari Université Toulouse 1 (adult, gambling, phishing, malware, dll)
+
+> **Privasi**: Aplikasi TIDAK mendekripsi traffic HTTPS. Hanya menangkap nama domain, bukan konten halaman.
+
+---
+
+## 🚀 Instalasi
+
+### Prasyarat
+
+- **Flutter SDK** ≥ 3.11.0
+- **Dart SDK** ≥ 3.11.0
+- **Android Studio** atau VS Code dengan Flutter extension
+- **Firebase Project** yang sudah dikonfigurasi
+- **Android Device/Emulator** (API 21+ / Android 5.0+)
+
+### Langkah Instalasi
+
+1. **Clone repository**
+   ```bash
+   git clone https://github.com/alhifnywahid/mindsafe-app.git
+   cd mindsafe-app
+   ```
+
+2. **Download blocklist assets** (lihat bagian [Blocklist Assets](#-blocklist-assets))
+
+3. **Setup Firebase** (lihat bagian [Konfigurasi Firebase](#-konfigurasi-firebase))
+
+4. **Install dependencies**
+   ```bash
+   flutter pub get
+   ```
+
+5. **Generate Hive adapters**
+   ```bash
+   dart run build_runner build --delete-conflicting-outputs
+   ```
+
+6. **Jalankan aplikasi**
+   ```bash
+   flutter run
+   ```
+
+---
+
+## 🔥 Konfigurasi Firebase
+
+### 1. Buat Firebase Project
+
+1. Buka [Firebase Console](https://console.firebase.google.com)
+2. Buat project baru (contoh: "MindSafe")
+3. Tambahkan aplikasi Android dengan package name: `com.example.mindsafe_flutter`
+4. Download `google-services.json`
+5. Letakkan di: `android/app/google-services.json` (replace file yang ada)
+
+### 2. Aktifkan Firebase Services
+
+- **Authentication** → Aktifkan **Google Sign-In** provider
+- **Cloud Firestore** → Buat database (production mode)
+
+### 3. Setup Admin
+
+Admin ditentukan berdasarkan email yang di-hardcode. Untuk mengubah akun admin:
+
+1. Buka `lib/data/services/auth_service.dart`
+2. Cari properti `isAdmin` dan ubah email admin sesuai kebutuhan
+3. Update juga Firestore Security Rules agar sesuai dengan email admin baru
+
+---
+
+## 📦 Blocklist Assets
+
+File blocklist **tidak disertakan** di repository karena ukurannya yang besar (>100MB). Anda perlu mendownload dan meletakkannya secara manual.
+
+### Download
+
+📥 **[Download Blocklist Assets (Google Drive)](https://drive.google.com/drive/folders/1S767PcZlFrobctX16bQ7zK2IH0gySHKm?usp=sharing)**
+
+### Sumber Asli
+
+Blocklist yang digunakan bersumber dari **[UT1 Blocklist - Université Toulouse 1 Capitole](https://dsi.ut-capitole.fr/blacklists/)**. Dataset ini merupakan salah satu referensi klasifikasi domain yang banyak digunakan dalam penelitian keamanan internet.
+
+### Struktur
+
+Letakkan semua file `.txt` ke dalam folder `assets/blocklists/`:
+
+```
+assets/blocklists/
+├── adult.txt          # Domain konten dewasa (~119 MB)
+├── cryptojacking.txt  # Domain cryptojacking
+├── dangerius.txt      # Domain berbahaya
+├── dating.txt         # Domain dating
+├── ddos.txt           # Domain DDoS
+├── gambling.txt       # Domain judi online
+├── hacking.txt        # Domain hacking
+├── malware.txt        # Domain malware
+├── phishing.txt       # Domain phishing
+└── warez.txt          # Domain warez/piracy
+```
+
+---
+
+## 🔐 Firestore Security Rules
+
+Berikut adalah konfigurasi Firestore Security Rules yang digunakan. Sesuaikan email admin (`admin@example.com`) dengan email Google yang ingin dijadikan admin.
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User data - hanya bisa diakses oleh user yang bersangkutan
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /domain_accesses/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Admin bisa membaca data semua user
+    match /users/{userId} {
+      allow read: if request.auth != null &&
+        request.auth.token.email == 'admin@example.com';
+    }
+
+    // Domain rules - semua user bisa baca, hanya admin bisa tulis
+    match /domain_rules/{ruleId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        request.auth.token.email == 'admin@example.com';
+    }
+
+    // Skip domains - semua user bisa baca, hanya admin bisa tulis
+    match /skip_domains/{domainId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        request.auth.token.email == 'admin@example.com';
+    }
+
+    // App config - semua user bisa baca, hanya admin bisa tulis
+    match /app_config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        request.auth.token.email == 'admin@example.com';
+    }
+  }
+}
+```
+
+> ⚠️ **Penting**: Ganti `admin@example.com` dengan email Google yang ingin dijadikan admin baik di Firestore Rules maupun di kode aplikasi.
+
+---
+
+## ❓ FAQ
+
+### Bagaimana cara kerja monitoring?
+
+MindSafe menggunakan dua metode:
+- **VPN Service**: Membuat VPN lokal untuk menangkap DNS query dari semua aplikasi
+- **Accessibility Service**: Membaca URL dari address bar browser untuk tracking yang lebih detail
+
+Kedua metode bekerja sepenuhnya di perangkat — tidak ada data yang keluar tanpa izin pengguna.
+
+### Apakah aplikasi membaca pesan atau konten saya?
+
+**Tidak.** MindSafe hanya memantau nama domain (contoh: "google.com") dan URL browser. Aplikasi tidak membaca, mencegat, atau menyimpan konten halaman, pesan, password, foto, atau data pribadi lainnya.
+
+### Mengapa menggunakan Local VPN?
+
+Local VPN adalah metode teknis untuk menangkap DNS query tanpa memerlukan root access. Berbeda dengan VPN tradisional:
+- Tidak merutekan traffic melalui server eksternal
+- Tidak memperlambat koneksi internet
+- Berjalan sepenuhnya di perangkat
+- Hanya melihat DNS request
+
+### Mengapa beberapa website tidak terdeteksi?
+
+Jika browser menggunakan **Secure DNS (DNS over HTTPS)**, DNS query akan melewati VPN lokal. Untuk mengatasinya, nonaktifkan Secure DNS di pengaturan browser:
+- **Chrome**: Settings → Privacy and Security → Use Secure DNS → OFF
+- **Firefox**: Settings → Enhanced DNS Privacy → Off
+- **Edge**: Settings → Privacy and Security → Use Secure DNS → OFF
+
+---
+
+## 🔧 Troubleshooting
+
+| Masalah | Solusi |
+|---------|--------|
+| **App tidak bisa build** | Pastikan `google-services.json` sudah benar. Jalankan `flutter clean && flutter pub get` |
+| **VPN permission denied** | Android butuh persetujuan eksplisit. Restart VPN dari aplikasi |
+| **Domain tidak terdeteksi** | Pastikan VPN aktif, cek notifikasi "VPN Active", nonaktifkan Secure DNS di browser |
+| **Build error Hive** | Jalankan `dart run build_runner clean` lalu `dart run build_runner build --delete-conflicting-outputs` |
+| **Blocklist tidak termuat** | Pastikan file blocklist sudah diletakkan di `assets/blocklists/` |
+
+---
+
+## 📄 Lisensi
+
+Proyek ini dikembangkan untuk keperluan **penelitian akademik (Tugas Akhir/Skripsi)**. Seluruh kode sumber bersifat open-source untuk tujuan edukasi.
+
+---
+
+## 👨‍💻 Developer
+
+Dikembangkan sebagai bagian dari penelitian Tugas Akhir.
+
+---
+
+> **Catatan Privasi**: MindSafe dirancang dengan mengutamakan privasi. Aplikasi HANYA memantau nama domain dan URL, tidak pernah konten halaman atau data pribadi. Semua data disimpan secara lokal dan pengguna memiliki kontrol penuh atas datanya.
