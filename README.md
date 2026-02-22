@@ -350,13 +350,13 @@ Jika browser menggunakan **Secure DNS (DNS over HTTPS)**, DNS query akan melewat
 
 ## 📄 Lisensi
 
-Proyek ini dikembangkan untuk keperluan **penelitian akademik (Tugas Akhir/Skripsi)**. Seluruh kode sumber bersifat open-source untuk tujuan edukasi.
+Proyek ini dilisensikan di bawah [MIT License](LICENSE). Lihat file `LICENSE` untuk detail lengkap.
 
 ---
 
 ## 👨‍💻 Developer
 
-Dikembangkan sebagai bagian dari penelitian Tugas Akhir.
+Dikembangkan oleh **Alhifny Wahid** sebagai bagian dari penelitian Tugas Akhir.
 
 ---
 
