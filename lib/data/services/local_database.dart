@@ -58,7 +58,7 @@ class LocalDatabase extends GetxService {
   }
 
   Future<void> _initializeDefaultRules() async {
-    // No default rules — admin adds rules manually
+    // No default rules - admin adds rules manually
   }
 
   Future<void> clearAll() async {

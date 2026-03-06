@@ -277,7 +277,7 @@ class AppTranslations extends Translations {
         'This captures which domains are being accessed by all apps.\n\n'
         '• Accessibility Service: Reads the URL from your browser address bar '
         'to provide more detailed, page-level tracking.\n\n'
-        'Both methods work entirely on your device — no data leaves your phone without your permission.',
+        'Both methods work entirely on your device - no data leaves your phone without your permission.',
     'faq_q2': 'Does the app read my messages or content?',
     'faq_a2':
         'No. Mindsafe only monitors domain names (e.g., "google.com") and browser URLs. '
@@ -332,6 +332,9 @@ class AppTranslations extends Translations {
     'dialog_confirm_delete_data': 'Delete Browsing Data?',
     'dialog_confirm_delete_data_desc':
         'This will permanently delete all monitored activity. This cannot be undone.',
+    'dialog_deleting': 'Deleting Data...',
+    'dialog_deleting_desc':
+        'Please wait while we delete your data from the device and cloud.',
     'dialog_confirm_delete_account': 'Delete Account?',
     'dialog_confirm_delete_account_desc':
         'This will permanently delete your account and all associated data. This cannot be undone.',
@@ -382,6 +385,7 @@ class AppTranslations extends Translations {
     'reg_consent_agree':
         'I agree to browsing monitoring for awareness purposes',
     'reg_next': 'Next',
+    'reg_back': 'Back',
     'reg_complete': 'Complete',
     'reg_error_save': 'Failed to save registration data',
 
@@ -409,6 +413,9 @@ class AppTranslations extends Translations {
     'login_title': 'Mindsafe',
     'login_subtitle': 'Monitor your browsing habits\nwith awareness',
     'login_google': 'Continue with Google',
+    'login_loading': 'Signing in...',
+    'login_privacy': 'Your data stays on your device',
+    'login_footer': 'By continuing, you agree to our Terms & Conditions',
 
     // ─── Admin ───
     'admin_title': 'Admin Panel',
@@ -534,7 +541,7 @@ class AppTranslations extends Translations {
   static const Map<String, String> idID = {
     // ─── Navigation ───
     'nav_home': 'Beranda',
-    'nav_insights': 'Wawasan',
+    'nav_insights': 'Analisis',
     'nav_history': 'Riwayat',
     'nav_settings': 'Pengaturan',
     'nav_admin': 'Admin',
@@ -631,16 +638,16 @@ class AppTranslations extends Translations {
     'history_calendar_empty': 'Tidak ada aktivitas pada tanggal ini',
 
     // ─── Insights Screen ───
-    'insights_title': 'Wawasan',
-    'insights_empty': 'Wawasan Segera Hadir',
+    'insights_title': 'Analisis',
+    'insights_empty': 'Analisis Segera Hadir',
     'insights_empty_desc':
-        'Mulai monitoring untuk wawasan yang dipersonalisasi',
+        'Mulai monitoring untuk analisis yang dipersonalisasi',
     'insights_monitoring_active': 'Monitoring tetap aktif',
     'insights_summary': 'Ringkasan',
     'insights_total_domains': 'Total Domain',
     'insights_total_duration': 'Total Durasi',
     'insights_avg_daily': 'Rata-rata Harian',
-    'insights_your_insights': 'Wawasan Kamu',
+    'insights_your_insights': 'Analisis Kamu',
     'insights_high_activity': 'Aktivitas Tinggi',
     'insights_high_activity_desc':
         'Kamu mengunjungi @count domain unik. Pertimbangkan untuk mengurangi.',
@@ -810,7 +817,7 @@ class AppTranslations extends Translations {
         'Ini menangkap domain mana yang diakses oleh semua aplikasi.\n\n'
         '• Layanan Aksesibilitas: Membaca URL dari address bar browser Anda '
         'untuk pelacakan halaman yang lebih detail.\n\n'
-        'Kedua metode bekerja sepenuhnya di perangkat Anda — tidak ada data yang keluar dari ponsel tanpa izin Anda.',
+        'Kedua metode bekerja sepenuhnya di perangkat Anda - tidak ada data yang keluar dari ponsel tanpa izin Anda.',
     'faq_q2': 'Apakah aplikasi membaca pesan atau konten saya?',
     'faq_a2':
         'Tidak. Mindsafe hanya memantau nama domain (misalnya, "google.com") dan URL browser. '
@@ -865,6 +872,9 @@ class AppTranslations extends Translations {
     'dialog_confirm_delete_data': 'Hapus Data Browsing?',
     'dialog_confirm_delete_data_desc':
         'Ini akan menghapus semua aktivitas yang dipantau secara permanen. Tidak dapat dikembalikan.',
+    'dialog_deleting': 'Menghapus Data...',
+    'dialog_deleting_desc':
+        'Silakan tunggu, data sedang dihapus dari perangkat dan cloud.',
     'dialog_confirm_delete_account': 'Hapus Akun?',
     'dialog_confirm_delete_account_desc':
         'Ini akan menghapus akun dan semua data terkait secara permanen. Tidak dapat dikembalikan.',
@@ -916,6 +926,7 @@ class AppTranslations extends Translations {
     'reg_consent_agree':
         'Saya setuju dengan pemantauan browsing untuk tujuan kesadaran',
     'reg_next': 'Selanjutnya',
+    'reg_back': 'Kembali',
     'reg_complete': 'Selesai',
     'reg_error_save': 'Gagal menyimpan data registrasi',
 
@@ -941,8 +952,11 @@ class AppTranslations extends Translations {
 
     // ─── Login ───
     'login_title': 'Mindsafe',
-    'login_subtitle': 'Pantau kebiasaan browsingmu\ndengan kesadaran',
+    'login_subtitle': 'Jaga aktivitas internetmu\ntetap aman',
     'login_google': 'Lanjutkan dengan Google',
+    'login_loading': 'Masuk...',
+    'login_privacy': 'Data kamu tersimpan di perangkat',
+    'login_footer': 'Dengan melanjutkan, kamu menyetujui Syarat & Ketentuan',
 
     // ─── Admin ───
     'admin_title': 'Panel Admin',
@@ -1033,7 +1047,7 @@ class AppTranslations extends Translations {
         'Ketuk untuk mengaktifkan Layanan Aksesibilitas untuk menangkap URL',
 
     // ─── Splash ───
-    'splash_tagline': 'Kesadaran Browsing',
+    'splash_tagline': 'Penjelajahan Aman',
     'splash_loading_database': 'Memuat data...',
     'splash_loading_auth': 'Memeriksa autentikasi...',
     'splash_loading_vpn': 'Menyiapkan VPN...',

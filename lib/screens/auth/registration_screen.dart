@@ -14,7 +14,8 @@ class RegistrationScreen extends StatefulWidget {
   State<RegistrationScreen> createState() => _RegistrationScreenState();
 }
 
-class _RegistrationScreenState extends State<RegistrationScreen> {
+class _RegistrationScreenState extends State<RegistrationScreen>
+    with TickerProviderStateMixin {
   static const _totalSteps = 5;
   int _currentStep = 0;
 
@@ -27,9 +28,26 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   bool _isSubmitting = false;
 
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
   @override
   void dispose() {
     _nicknameCtrl.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -82,11 +100,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       // Go to onboarding
       Get.offAllNamed(AppRoutes.onboarding);
     } catch (e) {
-      Get.snackbar(
-        'dialog_error'.tr,
-        'reg_error_save'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      if (context.mounted) {
+        showFToast(
+          context: context,
+          style: const FToastStyleDelta.delta(
+            constraints: BoxConstraints(minWidth: double.infinity, maxWidth: double.infinity),
+          ),
+          alignment: FToastAlignment.topCenter,
+          icon: const Icon(Icons.error_outline, color: Colors.red),
+          title: Text('dialog_error'.tr),
+          description: Text('reg_error_save'.tr),
+        );
+      }
     } finally {
       setState(() => _isSubmitting = false);
     }
@@ -109,102 +134,216 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = FTheme.of(context);
+    final primaryColor = theme.colors.primary;
+    final screenSize = MediaQuery.of(context).size;
 
-    return FScaffold(
-      child: SafeArea(
-        child: Column(
-          children: [
-            // ─── Progress bar ───
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      if (_currentStep > 0)
-                        IconButton(
-                          icon: Icon(
-                            Icons.arrow_back,
-                            color: theme.colors.foreground,
+    return Scaffold(
+      backgroundColor: theme.colors.background,
+      body: SizedBox.expand(
+        child: ClipRect(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // ── Background gradient orbs ──
+              Positioned(
+                top: -screenSize.height * 0.15,
+                left: -screenSize.width * 0.3,
+                child: AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) => Container(
+                    width: screenSize.width * 0.8,
+                    height: screenSize.width * 0.8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          primaryColor.withValues(
+                            alpha: 0.15 * _pulseAnimation.value,
                           ),
-                          onPressed: _back,
-                        )
-                      else
-                        const SizedBox(width: 48),
-                      Text(
-                        '${_currentStep + 1} / $_totalSteps',
-                        style: theme.typography.sm.copyWith(
-                          color: theme.colors.mutedForeground,
-                          fontWeight: FontWeight.w600,
-                        ),
+                          primaryColor.withValues(alpha: 0),
+                        ],
                       ),
-                      const SizedBox(width: 48),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  // Progress indicator
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: (_currentStep + 1) / _totalSteps,
-                      backgroundColor: theme.colors.mutedForeground.withValues(
-                        alpha: 0.2,
-                      ),
-                      color: theme.colors.primary,
-                      minHeight: 4,
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-
-            // ─── Step content ───
-            Expanded(
-              child: Material(
-                color: Colors.transparent,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: SingleChildScrollView(
-                    key: ValueKey(_currentStep),
-                    padding: AppSpacing.paddingLg,
-                    child: _buildStep(theme),
+              Positioned(
+                bottom: -screenSize.height * 0.1,
+                right: -screenSize.width * 0.25,
+                child: AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) => Container(
+                    width: screenSize.width * 0.7,
+                    height: screenSize.width * 0.7,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          primaryColor.withValues(
+                            alpha: 0.1 * _pulseAnimation.value,
+                          ),
+                          primaryColor.withValues(alpha: 0),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            // ─── Bottom button ───
-            Padding(
-              padding: AppSpacing.paddingLg,
-              child: SizedBox(
-                width: double.infinity,
-                child: FButton(
-                  onPress: _canProceed
-                      ? () {
-                          if (_isSubmitting) return;
-                          _next();
-                        }
-                      : null,
-                  child: _isSubmitting
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: theme.colors.background,
+              // ── Main content ──
+              SafeArea(
+                child: Column(
+                  children: [
+                    // ─── Progress bar (no back button here) ───
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.md,
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            '${_currentStep + 1} / $_totalSteps',
+                            style: theme.typography.sm.copyWith(
+                              color: theme.colors.mutedForeground,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        )
-                      : Text(
-                          _currentStep < _totalSteps - 1
-                              ? 'reg_next'.tr
-                              : 'reg_complete'.tr,
+                          const SizedBox(height: AppSpacing.sm),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: TweenAnimationBuilder<double>(
+                              tween: Tween(
+                                begin: 0,
+                                end: (_currentStep + 1) / _totalSteps,
+                              ),
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeOutCubic,
+                              builder: (context, value, _) =>
+                                  LinearProgressIndicator(
+                                    value: value,
+                                    backgroundColor: theme
+                                        .colors
+                                        .mutedForeground
+                                        .withValues(alpha: 0.15),
+                                    color: primaryColor,
+                                    minHeight: 4,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // ─── Step content ───
+                    Expanded(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: SingleChildScrollView(
+                            key: ValueKey(_currentStep),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg,
+                            ),
+                            child: _buildStep(theme),
+                          ),
                         ),
+                      ),
+                    ),
+
+                    // ─── Bottom buttons ───
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.sm,
+                        AppSpacing.lg,
+                        AppSpacing.lg,
+                      ),
+                      child: Row(
+                        children: [
+                          // Back button (only visible on step 2+)
+                          if (_currentStep > 0) ...[
+                            Expanded(
+                              child: FButton.raw(
+                                onPress: _back,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: theme.colors.border,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'reg_back'.tr,
+                                      style: theme.typography.sm.copyWith(
+                                        color: theme.colors.foreground,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                          ],
+
+                          // Next / Complete button
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(
+                                  AppSpacing.radiusMd,
+                                ),
+                                boxShadow: _canProceed
+                                    ? [
+                                        BoxShadow(
+                                          color: primaryColor.withValues(
+                                            alpha: 0.25,
+                                          ),
+                                          blurRadius: 16,
+                                          offset: const Offset(0, 6),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: FButton(
+                                onPress: _canProceed
+                                    ? () {
+                                        if (_isSubmitting) return;
+                                        _next();
+                                      }
+                                    : null,
+                                child: _isSubmitting
+                                    ? SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: theme.colors.background,
+                                        ),
+                                      )
+                                    : Text(
+                                        _currentStep < _totalSteps - 1
+                                            ? 'reg_next'.tr
+                                            : 'reg_complete'.tr,
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -227,19 +366,63 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
+  // ─── Step icon with glow ─────────────────────────────────
+  Widget _stepIcon(IconData icon, FThemeData theme) {
+    final primaryColor = theme.colors.primary;
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) => Container(
+        width: 100,
+        height: 100,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: primaryColor.withValues(
+                alpha: 0.2 * _pulseAnimation.value,
+              ),
+              blurRadius: 30 * _pulseAnimation.value,
+              spreadRadius: 3 * _pulseAnimation.value,
+            ),
+          ],
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                primaryColor.withValues(alpha: 0.15),
+                primaryColor.withValues(alpha: 0.05),
+              ],
+            ),
+            border: Border.all(
+              color: primaryColor.withValues(alpha: 0.2),
+              width: 1.5,
+            ),
+          ),
+          child: Icon(icon, size: 44, color: primaryColor),
+        ),
+      ),
+    );
+  }
+
   // ─── Step 1: Nickname ─────────────────────────────────────
 
   Widget _buildNicknameStep(FThemeData theme) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.person_outline, size: 64, color: theme.colors.primary),
+        const SizedBox(height: AppSpacing.xl),
+        _stepIcon(Icons.person_outline_rounded, theme),
         const SizedBox(height: AppSpacing.lg),
         Text(
           'reg_nickname_title'.tr,
           style: theme.typography.xl2.copyWith(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
             color: theme.colors.foreground,
+            letterSpacing: -0.3,
           ),
           textAlign: TextAlign.center,
         ),
@@ -260,13 +443,20 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           decoration: InputDecoration(
             hintText: 'reg_nickname_hint'.tr,
             hintStyle: TextStyle(color: theme.colors.mutedForeground),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: theme.colors.primary.withValues(alpha: 0.05),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              borderSide: BorderSide.none,
+            ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: theme.colors.border),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              borderSide: BorderSide(
+                color: theme.colors.border.withValues(alpha: 0.5),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               borderSide: BorderSide(color: theme.colors.primary, width: 2),
             ),
           ),
@@ -287,13 +477,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.cake_outlined, size: 64, color: theme.colors.primary),
+        const SizedBox(height: AppSpacing.xl),
+        _stepIcon(Icons.cake_outlined, theme),
         const SizedBox(height: AppSpacing.lg),
         Text(
           'reg_age_title'.tr,
           style: theme.typography.xl2.copyWith(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
             color: theme.colors.foreground,
+            letterSpacing: -0.3,
           ),
           textAlign: TextAlign.center,
         ),
@@ -335,13 +527,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.wc, size: 64, color: theme.colors.primary),
+        const SizedBox(height: AppSpacing.xl),
+        _stepIcon(Icons.wc_rounded, theme),
         const SizedBox(height: AppSpacing.lg),
         Text(
           'reg_gender_title'.tr,
           style: theme.typography.xl2.copyWith(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
             color: theme.colors.foreground,
+            letterSpacing: -0.3,
           ),
           textAlign: TextAlign.center,
         ),
@@ -375,13 +569,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.auto_delete_outlined, size: 64, color: theme.colors.primary),
+        const SizedBox(height: AppSpacing.xl),
+        _stepIcon(Icons.auto_delete_outlined, theme),
         const SizedBox(height: AppSpacing.lg),
         Text(
           'reg_retention_title'.tr,
           style: theme.typography.xl2.copyWith(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
             color: theme.colors.foreground,
+            letterSpacing: -0.3,
           ),
           textAlign: TextAlign.center,
         ),
@@ -413,17 +609,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.verified_user_outlined,
-          size: 64,
-          color: theme.colors.primary,
-        ),
+        const SizedBox(height: AppSpacing.xl),
+        _stepIcon(Icons.verified_user_outlined, theme),
         const SizedBox(height: AppSpacing.lg),
         Text(
           'reg_consent_title'.tr,
           style: theme.typography.xl2.copyWith(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
             color: theme.colors.foreground,
+            letterSpacing: -0.3,
           ),
           textAlign: TextAlign.center,
         ),
@@ -439,11 +633,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         const SizedBox(height: AppSpacing.xl),
         InkWell(
           onTap: () => setState(() => _monitoringConsent = !_monitoringConsent),
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               border: Border.all(
                 color: _monitoringConsent
                     ? theme.colors.primary
@@ -451,26 +646,38 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 width: _monitoringConsent ? 2 : 1,
               ),
               color: _monitoringConsent
-                  ? theme.colors.primary.withValues(alpha: 0.05)
-                  : null,
+                  ? theme.colors.primary.withValues(alpha: 0.08)
+                  : theme.colors.primary.withValues(alpha: 0.02),
             ),
             child: Row(
               children: [
-                Checkbox(
-                  value: _monitoringConsent,
-                  onChanged: (v) =>
-                      setState(() => _monitoringConsent = v ?? false),
-                  activeColor: theme.colors.primary,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: theme.colors.primary.withValues(alpha: 0.1),
+                  ),
+                  child: Icon(
+                    Icons.shield_outlined,
+                    size: 20,
+                    color: theme.colors.primary,
+                  ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'reg_consent_agree'.tr,
-                    style: theme.typography.base.copyWith(
+                    style: theme.typography.sm.copyWith(
                       color: theme.colors.foreground,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
+                ),
+                const SizedBox(width: 8),
+                Switch(
+                  value: _monitoringConsent,
+                  onChanged: (v) => setState(() => _monitoringConsent = v),
+                  activeColor: theme.colors.primary,
                 ),
               ],
             ),
@@ -491,26 +698,28 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     Widget? leading,
   }) {
     final isSelected = groupValue == value;
+    final primaryColor = theme.colors.primary;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: InkWell(
         onTap: () => onChanged(value),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: AppSpacing.sm + 4,
           ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             border: Border.all(
-              color: isSelected ? theme.colors.primary : theme.colors.border,
+              color: isSelected ? primaryColor : theme.colors.border,
               width: isSelected ? 2 : 1,
             ),
             color: isSelected
-                ? theme.colors.primary.withValues(alpha: 0.05)
-                : null,
+                ? primaryColor.withValues(alpha: 0.08)
+                : primaryColor.withValues(alpha: 0.02),
           ),
           child: Row(
             children: [
@@ -526,11 +735,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
                 ),
               ),
-              Icon(
-                isSelected
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_off,
-                color: isSelected ? theme.colors.primary : theme.colors.border,
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected ? primaryColor : theme.colors.border,
+                    width: isSelected ? 6 : 2,
+                  ),
+                ),
               ),
             ],
           ),

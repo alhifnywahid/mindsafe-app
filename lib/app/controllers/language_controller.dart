@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class LanguageController extends GetxController {
   static const _key = 'locale';
 
-  final _locale = const Locale('en', 'US').obs;
+  final _locale = const Locale('id', 'ID').obs;
   Locale get locale => _locale.value;
 
   String get currentLanguageLabel =>
@@ -21,7 +21,7 @@ class LanguageController extends GetxController {
 
   void _loadFromPrefs() {
     final prefs = Get.find<SharedPreferences>();
-    final stored = prefs.getString(_key) ?? 'en';
+    final stored = prefs.getString(_key) ?? 'id';
     if (stored == 'id') {
       _locale.value = const Locale('id', 'ID');
     } else {

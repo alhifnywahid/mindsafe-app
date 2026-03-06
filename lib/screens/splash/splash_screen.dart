@@ -21,26 +21,39 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+    with TickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late AnimationController _pulseController;
   late Animation<double> _fadeIn;
+  late Animation<double> _pulseAnimation;
   String _statusText = '';
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _fadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    _fadeIn = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-    _controller.forward();
+    _fadeIn = CurvedAnimation(parent: _fadeController, curve: Curves.easeIn);
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    _fadeController.forward();
     _initializeAndNavigate();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _fadeController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -171,58 +184,158 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final theme = FTheme.of(context);
+    final primaryColor = theme.colors.primary;
+    final screenSize = MediaQuery.of(context).size;
 
-    return FScaffold(
-      child: Center(
-        child: FadeTransition(
-          opacity: _fadeIn,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+    return Scaffold(
+      backgroundColor: theme.colors.background,
+      body: SizedBox.expand(
+        child: ClipRect(
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: theme.colors.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.shield,
-                  size: 80,
-                  color: theme.colors.primary,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Mindsafe',
-                style: theme.typography.xl3.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colors.foreground,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'splash_tagline'.tr,
-                style: theme.typography.base.copyWith(
-                  color: theme.colors.mutedForeground,
+              // ── Background gradient orbs (same as login) ──
+              Positioned(
+                top: -screenSize.height * 0.15,
+                left: -screenSize.width * 0.3,
+                child: AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) => Container(
+                    width: screenSize.width * 0.8,
+                    height: screenSize.width * 0.8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          primaryColor.withValues(
+                            alpha: 0.15 * _pulseAnimation.value,
+                          ),
+                          primaryColor.withValues(alpha: 0),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 48),
-              SizedBox(
-                width: 28,
-                height: 28,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: theme.colors.primary,
+              Positioned(
+                bottom: -screenSize.height * 0.1,
+                right: -screenSize.width * 0.25,
+                child: AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) => Container(
+                    width: screenSize.width * 0.7,
+                    height: screenSize.width * 0.7,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          primaryColor.withValues(
+                            alpha: 0.1 * _pulseAnimation.value,
+                          ),
+                          primaryColor.withValues(alpha: 0),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: Text(
-                  _statusText,
-                  key: ValueKey(_statusText),
-                  style: theme.typography.xs.copyWith(
-                    color: theme.colors.mutedForeground.withValues(alpha: 0.7),
+
+              // ── Main content ──
+              Center(
+                child: FadeTransition(
+                  opacity: _fadeIn,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // ── Shield logo with glow (same as login) ──
+                      AnimatedBuilder(
+                        animation: _pulseAnimation,
+                        builder: (context, child) => Container(
+                          width: 140,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryColor.withValues(
+                                  alpha: 0.3 * _pulseAnimation.value,
+                                ),
+                                blurRadius: 40 * _pulseAnimation.value,
+                                spreadRadius: 5 * _pulseAnimation.value,
+                              ),
+                            ],
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  primaryColor.withValues(alpha: 0.15),
+                                  primaryColor.withValues(alpha: 0.05),
+                                ],
+                              ),
+                              border: Border.all(
+                                color: primaryColor.withValues(alpha: 0.2),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.shield_rounded,
+                              size: 64,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+
+                      // ── App name ──
+                      Text(
+                        'Mindsafe',
+                        style: theme.typography.xl3.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: theme.colors.foreground,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // ── Tagline ──
+                      Text(
+                        'splash_tagline'.tr,
+                        style: theme.typography.base.copyWith(
+                          color: theme.colors.mutedForeground,
+                        ),
+                      ),
+                      const SizedBox(height: 48),
+
+                      // ── Loading indicator ──
+                      SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── Status text ──
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: Text(
+                          _statusText,
+                          key: ValueKey(_statusText),
+                          style: theme.typography.xs.copyWith(
+                            color: theme.colors.mutedForeground.withValues(
+                              alpha: 0.7,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

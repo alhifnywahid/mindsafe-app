@@ -1,4 +1,4 @@
-package com.example.mindsafe_flutter
+package com.gopret.mindsafe
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo

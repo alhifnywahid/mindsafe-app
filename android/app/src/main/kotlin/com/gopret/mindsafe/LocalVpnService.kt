@@ -1,4 +1,4 @@
-package com.example.mindsafe_flutter
+package com.gopret.mindsafe
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -32,8 +32,8 @@ class LocalVpnService : VpnService() {
     companion object {
         var eventSink: EventChannel.EventSink? = null
         var isRunning = false
-        const val ACTION_START = "com.example.mindsafe_flutter.START_VPN"
-        const val ACTION_STOP = "com.example.mindsafe_flutter.STOP_VPN"
+        const val ACTION_START = "com.gopret.mindsafe.START_VPN"
+        const val ACTION_STOP = "com.gopret.mindsafe.STOP_VPN"
     }
 
     private var allowedPackages: List<String> = emptyList()
@@ -189,11 +189,8 @@ class LocalVpnService : VpnService() {
         
         val dnsPayload = packet.copyOfRange(dnsStart, length)
         
-        // Parse and log domain name
+        // Parse domain name from query (but don't send event yet)
         val domain = parseDnsName(dnsPayload)
-        if (domain != null) {
-            sendDomainEvent(domain)
-        }
         
         // Forward to real DNS server
         var socket: DatagramSocket? = null
@@ -212,6 +209,17 @@ class LocalVpnService : VpnService() {
             socket.receive(recvPkt)
             
             val dnsResponse = recvBuf.copyOf(recvPkt.length)
+            
+            // Only send domain event if DNS response is NOERROR (RCODE=0)
+            // This filters out NXDOMAIN, SERVFAIL, etc. (phantom domains)
+            if (domain != null && dnsResponse.size >= 4) {
+                val rcode = dnsResponse[3].toInt() and 0x0F
+                if (rcode == 0) {
+                    sendDomainEvent(domain)
+                } else {
+                    Log.d(TAG, "Skipped domain $domain (RCODE=$rcode)")
+                }
+            }
             
             // Build IP+UDP response and write back to VPN tunnel
             // Source: dstIp (10.0.0.1 = DNS server) -> Dest: srcIp (10.0.0.2 = client)

@@ -118,6 +118,68 @@ class FirestoreRepository extends GetxService {
     return count;
   }
 
+  /// Fetch all domain accesses from Firestore for the current user.
+  Future<List<DomainAccess>> fetchDomainAccesses() async {
+    final authService = Get.find<AuthService>();
+    final userId = authService.currentUser?.uid;
+    if (userId == null) return [];
+
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('domain_accesses')
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return DomainAccess(
+          domain: data['domain'] ?? '',
+          timestamp: (data['timestamp'] as Timestamp).toDate(),
+          durationSeconds: data['durationSeconds'] ?? 0,
+          category: data['category'] ?? 'safe',
+          synced: true, // Already in Firebase
+          userId: userId,
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('❌ Fetch domain accesses error: $e');
+      return [];
+    }
+  }
+
+  /// Delete all domain accesses from Firestore for the current user.
+  Future<void> deleteAllDomainAccesses() async {
+    final authService = Get.find<AuthService>();
+    final userId = authService.currentUser?.uid;
+    if (userId == null) return;
+
+    try {
+      final collection = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('domain_accesses');
+
+      // Delete in batches of 400
+      QuerySnapshot snapshot;
+      do {
+        snapshot = await collection.limit(400).get();
+        if (snapshot.docs.isEmpty) break;
+
+        final batch = _firestore.batch();
+        for (final doc in snapshot.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      } while (snapshot.docs.length == 400);
+
+      debugPrint('✅ All domain accesses deleted from Firestore');
+    } catch (e) {
+      debugPrint('❌ Delete domain accesses error: $e');
+    }
+  }
+
   // ─── Domain Rules (Admin) ─────────────────────────────────
 
   /// Save a domain rule to Firestore (global, shared across all users).

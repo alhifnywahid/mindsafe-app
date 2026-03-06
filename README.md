@@ -150,9 +150,9 @@ Update statistik → (Opsional) Sync ke Firestore
 ### Klasifikasi Domain
 
 Domain diklasifikasikan melalui 3 tahap:
-1. **Custom Rules** — Aturan kustom dari admin (prioritas tertinggi)
-2. **Skip Domains** — Domain yang diabaikan
-3. **UT1 Blocklist** — Dataset dari Université Toulouse 1 (adult, gambling, phishing, malware, dll)
+1. **Custom Rules** - Aturan kustom dari admin (prioritas tertinggi)
+2. **Skip Domains** - Domain yang diabaikan
+3. **UT1 Blocklist** - Dataset dari Université Toulouse 1 (adult, gambling, phishing, malware, dll)
 
 > **Privasi**: Aplikasi TIDAK mendekripsi traffic HTTPS. Hanya menangkap nama domain, bukan konten halaman.
 
@@ -313,7 +313,7 @@ MindSafe menggunakan dua metode:
 - **VPN Service**: Membuat VPN lokal untuk menangkap DNS query dari semua aplikasi
 - **Accessibility Service**: Membaca URL dari address bar browser untuk tracking yang lebih detail
 
-Kedua metode bekerja sepenuhnya di perangkat — tidak ada data yang keluar tanpa izin pengguna.
+Kedua metode bekerja sepenuhnya di perangkat - tidak ada data yang keluar tanpa izin pengguna.
 
 ### Apakah aplikasi membaca pesan atau konten saya?
 

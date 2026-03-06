@@ -30,7 +30,7 @@ void main() async {
 
   await initializeDateFormatting();
 
-  debugPrint('✅ Minimal init done — launching UI');
+  debugPrint('✅ Minimal init done - launching UI');
   runApp(const MindsafeApp());
 }
 
@@ -47,7 +47,7 @@ class MindsafeApp extends StatelessWidget {
       colors: FThemes.zinc.dark.colors.copyWith(
         background: const Color(0xFF0C0B1A), // deep indigo-navy
         foreground: const Color(0xFFEDE9FE), // soft lavender white
-        primary: const Color(0xFF818CF8), // bright indigo
+        primary: const Color(0xFF6366F1), // deep indigo (better contrast)
         primaryForeground: const Color(0xFFF5F3FF), // almost white
         secondary: const Color(0xFF1E1B3A), // muted indigo surface
         secondaryForeground: const Color(0xFFC4B5FD), // light purple
@@ -114,7 +114,7 @@ class MindsafeApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         translations: AppTranslations(),
         locale: currentLocale,
-        fallbackLocale: const Locale('en', 'US'),
+        fallbackLocale: const Locale('id', 'ID'),
         theme: lightTheme,
         darkTheme: darkTheme,
         themeMode: tm,
@@ -126,7 +126,12 @@ class MindsafeApp extends StatelessWidget {
               : foruiLight;
           return FTheme(
             data: foruiTheme,
-            child: FToaster(child: child!),
+            child: FToaster(
+              style: const FToasterStyleDelta.delta(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+              ),
+              child: child!,
+            ),
           );
         },
         initialRoute: AppRoutes.splash,

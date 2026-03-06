@@ -14,6 +14,43 @@
       },
       "oauth_client": [
         {
+          "client_id": "485481393887-mh4s79npgos3ov5v9vbb2t0s6qva98c5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.mindsafe_flutter",
+            "certificate_hash": "6a64faeeb2c39045e7c8427564ca51528368fb97"
+          }
+        },
+        {
+          "client_id": "485481393887-014t1qli61giogtec18rdchh88eju53g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD11ncRj5qUc5X5NOGwg7xtCrBchk6w-bA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "485481393887-014t1qli61giogtec18rdchh88eju53g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:485481393887:android:28803d87f1a9c32d65c36a",
+        "android_client_info": {
+          "package_name": "com.gopret.mindsafe"
+        }
+      },
+      "oauth_client": [
+        {
           "client_id": "485481393887-014t1qli61giogtec18rdchh88eju53g.apps.googleusercontent.com",
           "client_type": 3
         }

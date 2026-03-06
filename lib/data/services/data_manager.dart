@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
 import 'package:mindsafe_flutter/data/services/local_database.dart';
+import 'package:mindsafe_flutter/data/repositories/firestore_repository.dart';
+import 'package:mindsafe_flutter/app/controllers/vpn_controller.dart';
 
 class DataManager extends GetxService {
   final LocalDatabase _db = Get.find<LocalDatabase>();
@@ -25,14 +27,30 @@ class DataManager extends GetxService {
     return toDelete.length;
   }
 
-  /// Delete all browsing data
+  /// Delete all browsing data (local + Firebase)
   Future<void> deleteAllBrowsingData() async {
+    // Delete local data
     await _db.domainAccess.clear();
+
+    // Delete from Firebase too (user privacy)
+    try {
+      final repo = Get.find<FirestoreRepository>();
+      await repo.deleteAllDomainAccesses();
+    } catch (e) {
+      // ignore: avoid_print
+      print('Firebase delete error: $e');
+    }
+
+    // Refresh UI stats to reflect empty data
+    try {
+      final vpnCtrl = Get.find<VpnController>();
+      vpnCtrl.refreshStats();
+    } catch (_) {}
   }
 
   /// Delete all user data (browsing data + settings)
   Future<void> deleteAllUserData() async {
-    await _db.domainAccess.clear();
+    await deleteAllBrowsingData();
     await _db.settings.clear();
   }
 }

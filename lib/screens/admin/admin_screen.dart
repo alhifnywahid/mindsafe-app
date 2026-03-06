@@ -1861,10 +1861,25 @@ class _NotificationTabState extends State<_NotificationTab> {
                                   final title = titleCtrl.text.trim();
                                   final body = bodyCtrl.text.trim();
                                   if (title.isEmpty || body.isEmpty) {
-                                    Get.snackbar(
-                                      'Error',
-                                      'admin_notif_fill_all'.tr,
-                                    );
+                                    if (context.mounted) {
+                                      showFToast(
+                                        context: context,
+                                        style: const FToastStyleDelta.delta(
+                                          constraints: BoxConstraints(
+                                            minWidth: double.infinity, maxWidth: double.infinity,
+                                          ),
+                                        ),
+                                        alignment: FToastAlignment.topCenter,
+                                        icon: const Icon(
+                                          Icons.warning_amber,
+                                          color: Colors.orange,
+                                        ),
+                                        title: const Text('Error'),
+                                        description: Text(
+                                          'admin_notif_fill_all'.tr,
+                                        ),
+                                      );
+                                    }
                                     return;
                                   }
                                   setSheetState(() => isSending = true);
@@ -1877,14 +1892,42 @@ class _NotificationTabState extends State<_NotificationTab> {
                                       body: body,
                                       type: selectedType,
                                     );
-                                    Get.snackbar(
-                                      'admin_notif_sent'.tr,
-                                      title,
-                                      snackPosition: SnackPosition.BOTTOM,
-                                    );
+                                    if (context.mounted) {
+                                      showFToast(
+                                        context: context,
+                                        style: const FToastStyleDelta.delta(
+                                          constraints: BoxConstraints(
+                                            minWidth: double.infinity, maxWidth: double.infinity,
+                                          ),
+                                        ),
+                                        alignment: FToastAlignment.topCenter,
+                                        icon: const Icon(
+                                          Icons.check_circle,
+                                          color: Color(0xFF22C55E),
+                                        ),
+                                        title: Text('admin_notif_sent'.tr),
+                                        description: Text(title),
+                                      );
+                                    }
                                     _loadHistory();
                                   } catch (e) {
-                                    Get.snackbar('Error', e.toString());
+                                    if (context.mounted) {
+                                      showFToast(
+                                        context: context,
+                                        style: const FToastStyleDelta.delta(
+                                          constraints: BoxConstraints(
+                                            minWidth: double.infinity, maxWidth: double.infinity,
+                                          ),
+                                        ),
+                                        alignment: FToastAlignment.topCenter,
+                                        icon: const Icon(
+                                          Icons.error_outline,
+                                          color: Colors.red,
+                                        ),
+                                        title: const Text('Error'),
+                                        description: Text(e.toString()),
+                                      );
+                                    }
                                     setSheetState(() => isSending = false);
                                   }
                                 },
@@ -1976,7 +2019,18 @@ class _NotificationTabState extends State<_NotificationTab> {
       await repo.deleteNotification(id);
       _loadHistory();
     } catch (e) {
-      Get.snackbar('Error', e.toString());
+      if (mounted) {
+        showFToast(
+          context: context,
+          style: const FToastStyleDelta.delta(
+            constraints: BoxConstraints(minWidth: double.infinity, maxWidth: double.infinity),
+          ),
+          alignment: FToastAlignment.topCenter,
+          icon: const Icon(Icons.error_outline, color: Colors.red),
+          title: const Text('Error'),
+          description: Text(e.toString()),
+        );
+      }
     }
   }
 }

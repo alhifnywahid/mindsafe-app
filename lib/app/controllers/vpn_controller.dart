@@ -25,7 +25,7 @@ class VpnController extends GetxController with WidgetsBindingObserver {
   static const _prefKeyTrackAll = 'track_all_apps';
 
   // Notification toggle
-  final isNotificationEnabled = true.obs;
+  final isNotificationEnabled = false.obs;
   static const _prefKeyNotification = 'notification_enabled';
 
   // Weekly stats
@@ -78,7 +78,7 @@ class VpnController extends GetxController with WidgetsBindingObserver {
   /// Load notification preference from SharedPreferences
   Future<void> _loadNotificationPref() async {
     final prefs = await SharedPreferences.getInstance();
-    isNotificationEnabled.value = prefs.getBool(_prefKeyNotification) ?? true;
+    isNotificationEnabled.value = prefs.getBool(_prefKeyNotification) ?? false;
   }
 
   /// Toggle notification on/off.
@@ -262,7 +262,7 @@ class VpnController extends GetxController with WidgetsBindingObserver {
     final skipDomains = _db.skipDomains.values;
     for (final skipDomain in skipDomains) {
       if (domain == skipDomain || domain.endsWith('.$skipDomain')) {
-        return; // Skip — do not record this domain
+        return; // Skip - do not record this domain
       }
     }
 
@@ -311,6 +311,12 @@ class VpnController extends GetxController with WidgetsBindingObserver {
 
     // Update today's stats
     _calculateTodayStats();
+  }
+
+  /// Recalculate all statistics (called after pull from Firebase).
+  void refreshStats() {
+    _calculateTodayStats();
+    _calculateWeeklyStats();
   }
 
   void _calculateTodayStats() {

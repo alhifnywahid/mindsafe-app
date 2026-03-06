@@ -88,7 +88,7 @@ class NotificationService extends GetxService {
     if (androidPlugin != null) {
       return await androidPlugin.areNotificationsEnabled() ?? false;
     }
-    return true; // Non-Android platforms — assume allowed
+    return true; // Non-Android platforms - assume allowed
   }
 
   /// Request notification permission from the OS.
@@ -118,7 +118,7 @@ class NotificationService extends GetxService {
     final lastShown = _cooldowns[domain];
     if (lastShown != null && now.difference(lastShown) < _cooldownDuration) {
       debugPrint('🔔 Notification skipped (cooldown): $domain');
-      return; // Still in cooldown — skip
+      return; // Still in cooldown - skip
     }
     _cooldowns[domain] = now;
 

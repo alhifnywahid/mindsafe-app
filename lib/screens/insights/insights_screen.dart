@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:forui/forui.dart';
 import 'package:mindsafe_flutter/data/services/local_database.dart';
 import 'package:mindsafe_flutter/data/services/auth_service.dart';
+import 'package:mindsafe_flutter/data/models/domain_access.dart';
 import 'package:mindsafe_flutter/core/constants/app_spacing.dart';
 import 'package:mindsafe_flutter/core/widgets/app_card.dart';
 
@@ -22,8 +24,9 @@ class InsightsScreen extends StatelessWidget {
           style: theme.typography.base.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
-      child: Builder(
-        builder: (context) {
+      child: ValueListenableBuilder(
+        valueListenable: db.domainAccess.listenable(),
+        builder: (context, Box<DomainAccess> box, _) {
           final accesses = db.userDomainAccess(userId);
 
           if (accesses.isEmpty) {

@@ -450,7 +450,12 @@ class _MonitoringSheet extends StatelessWidget {
                       if (context.mounted) {
                         showFToast(
                           context: context,
-                          alignment: FToastAlignment.bottomCenter,
+                          style: const FToastStyleDelta.delta(
+                            constraints: BoxConstraints(
+                              minWidth: double.infinity, maxWidth: double.infinity,
+                            ),
+                          ),
+                          alignment: FToastAlignment.topCenter,
                           icon: const Icon(Icons.shield_outlined),
                           title: Text('toast_monitoring_stopped'.tr),
                           description: Text('toast_monitoring_stopped_desc'.tr),
@@ -462,7 +467,12 @@ class _MonitoringSheet extends StatelessWidget {
                       if (result == 'started') {
                         showFToast(
                           context: context,
-                          alignment: FToastAlignment.bottomCenter,
+                          style: const FToastStyleDelta.delta(
+                            constraints: BoxConstraints(
+                              minWidth: double.infinity, maxWidth: double.infinity,
+                            ),
+                          ),
+                          alignment: FToastAlignment.topCenter,
                           icon: const Icon(
                             Icons.shield,
                             color: Color(0xFF22C55E),
@@ -518,11 +528,16 @@ class _MonitoringSheet extends StatelessWidget {
                           final granted = await notifService
                               .requestPermission();
                           if (!granted) {
-                            // Permission denied — show toast and don't enable
+                            // Permission denied - show toast and don't enable
                             if (context.mounted) {
                               showFToast(
                                 context: context,
-                                alignment: FToastAlignment.bottomCenter,
+                                style: const FToastStyleDelta.delta(
+                                  constraints: BoxConstraints(
+                                    minWidth: double.infinity, maxWidth: double.infinity,
+                                  ),
+                                ),
+                                alignment: FToastAlignment.topCenter,
                                 icon: const Icon(
                                   Icons.notifications_off_outlined,
                                   color: Colors.red,
@@ -543,7 +558,12 @@ class _MonitoringSheet extends StatelessWidget {
                     if (context.mounted) {
                       showFToast(
                         context: context,
-                        alignment: FToastAlignment.bottomCenter,
+                        style: const FToastStyleDelta.delta(
+                          constraints: BoxConstraints(
+                            minWidth: double.infinity, maxWidth: double.infinity,
+                          ),
+                        ),
+                        alignment: FToastAlignment.topCenter,
                         icon: Icon(
                           newValue
                               ? Icons.notifications_active

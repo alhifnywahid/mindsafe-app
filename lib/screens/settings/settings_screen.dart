@@ -340,13 +340,27 @@ class SettingsScreen extends StatelessWidget {
                             if (settings != null) {
                               settings.dataRetentionDays = days;
                               settings.save();
-                              Get.snackbar(
-                                'settings_updated'.tr,
-                                'settings_retention_set'.trParams({
-                                  'count': '$days',
-                                }),
-                                snackPosition: SnackPosition.BOTTOM,
-                              );
+                              if (context.mounted) {
+                                showFToast(
+                                  context: context,
+                                  style: const FToastStyleDelta.delta(
+                                    constraints: BoxConstraints(
+                                      minWidth: double.infinity, maxWidth: double.infinity,
+                                    ),
+                                  ),
+                                  alignment: FToastAlignment.topCenter,
+                                  icon: const Icon(
+                                    Icons.check_circle,
+                                    color: Color(0xFF22C55E),
+                                  ),
+                                  title: Text('settings_updated'.tr),
+                                  description: Text(
+                                    'settings_retention_set'.trParams({
+                                      'count': '$days',
+                                    }),
+                                  ),
+                                );
+                              }
                             }
                           },
                         );
@@ -546,23 +560,138 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _confirmDeleteDataSheet(BuildContext context, LocalDatabase db) async {
-    final confirmed = await showConfirmSheet(
+  void _confirmDeleteDataSheet(BuildContext context, LocalDatabase db) {
+    final theme = FTheme.of(context);
+    bool isDeleting = false;
+
+    showFSheet(
       context: context,
-      title: 'dialog_confirm_delete_data'.tr,
-      description: 'dialog_confirm_delete_data_desc'.tr,
-      confirmLabel: 'dialog_delete'.tr,
-      icon: Icons.delete_outline,
+      side: FLayout.btt,
+      mainAxisMaxRatio: null,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return PopScope(
+              canPop: !isDeleting,
+              child: AppBottomSheet(
+                children: [
+                  // Icon or loading spinner
+                  if (isDeleting)
+                    const SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: CircularProgressIndicator(strokeWidth: 3),
+                    )
+                  else
+                    Icon(
+                      Icons.delete_outline,
+                      size: 40,
+                      color: theme.colors.error,
+                    ),
+                  const SizedBox(height: 12),
+                  Text(
+                    isDeleting
+                        ? 'dialog_deleting'.tr
+                        : 'dialog_confirm_delete_data'.tr,
+                    style: theme.typography.lg.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colors.foreground,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    isDeleting
+                        ? 'dialog_deleting_desc'.tr
+                        : 'dialog_confirm_delete_data_desc'.tr,
+                    textAlign: TextAlign.center,
+                    style: theme.typography.sm.copyWith(
+                      color: theme.colors.mutedForeground,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FButton(
+                          variant: FButtonVariant.outline,
+                          onPress: isDeleting ? null : () => Navigator.pop(ctx),
+                          child: Text('dialog_cancel'.tr),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FButton(
+                          variant: FButtonVariant.destructive,
+                          onPress: isDeleting
+                              ? null
+                              : () async {
+                                  setSheetState(() => isDeleting = true);
+                                  try {
+                                    final dataManager = Get.find<DataManager>();
+                                    await dataManager.deleteAllBrowsingData();
+                                    if (ctx.mounted) Navigator.pop(ctx);
+                                    if (context.mounted) {
+                                      showFToast(
+                                        context: context,
+                                        style: const FToastStyleDelta.delta(
+                                          constraints: BoxConstraints(
+                                            minWidth: double.infinity, maxWidth: double.infinity,
+                                          ),
+                                        ),
+                                        alignment: FToastAlignment.topCenter,
+                                        icon: const Icon(
+                                          Icons.check_circle,
+                                          color: Color(0xFF22C55E),
+                                        ),
+                                        title: Text('dialog_done'.tr),
+                                        description: Text(
+                                          'dialog_all_data_deleted'.tr,
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (ctx.mounted) Navigator.pop(ctx);
+                                    if (context.mounted) {
+                                      showFToast(
+                                        context: context,
+                                        style: const FToastStyleDelta.delta(
+                                          constraints: BoxConstraints(
+                                            minWidth: double.infinity, maxWidth: double.infinity,
+                                          ),
+                                        ),
+                                        alignment: FToastAlignment.topCenter,
+                                        icon: const Icon(
+                                          Icons.error_outline,
+                                          color: Colors.red,
+                                        ),
+                                        title: Text('dialog_error'.tr),
+                                        description: Text(e.toString()),
+                                      );
+                                    }
+                                  }
+                                },
+                          prefix: isDeleting
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : null,
+                          child: Text('dialog_delete'.tr),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
-    if (confirmed == true) {
-      final dataManager = Get.find<DataManager>();
-      dataManager.deleteAllBrowsingData();
-      Get.snackbar(
-        'dialog_done'.tr,
-        'dialog_all_data_deleted'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    }
   }
 
   // ─── About helpers ───
