@@ -49,12 +49,20 @@ class DomainClassifier extends GetxService {
   /// Total number of domains across all loaded blocklists.
   final totalDomains = 0.obs;
 
+  /// Number of custom domain rules (reactive).
+  final rulesCount = 0.obs;
+
+  /// Number of skip domains (reactive).
+  final skipDomainsCount = 0.obs;
+
   /// Load all blocklist assets. Call once during app startup.
   Future<DomainClassifier> init() async {
     await _loadAllBlocklists();
-    // Also download admin rules from Firestore → local Hive
     await syncRulesFromFirestore();
     await syncSkipDomainsFromFirestore();
+    // Initialise reactive counters after sync
+    rulesCount.value = _db.domainRules.length;
+    skipDomainsCount.value = _db.skipDomains.length;
     return this;
   }
 
@@ -147,9 +155,8 @@ class DomainClassifier extends GetxService {
   // ─── CRUD for custom rules (admin) ────────────────────────
 
   Future<void> addRule(DomainRule rule) async {
-    // Save locally
     await _db.domainRules.put(rule.id, rule);
-    // Sync to Firestore
+    rulesCount.value = _db.domainRules.length;
     try {
       final repo = Get.find<FirestoreRepository>();
       await repo.saveDomainRule(rule);
@@ -170,6 +177,7 @@ class DomainClassifier extends GetxService {
 
   Future<void> deleteRule(String id) async {
     await _db.domainRules.delete(id);
+    rulesCount.value = _db.domainRules.length;
     try {
       final repo = Get.find<FirestoreRepository>();
       await repo.deleteDomainRule(id);
@@ -207,9 +215,8 @@ class DomainClassifier extends GetxService {
   // ─── CRUD for skip domains (admin) ────────────────────────
 
   Future<void> addSkipDomain(String domain) async {
-    // Save locally
     await _db.skipDomains.add(domain);
-    // Sync to Firestore
+    skipDomainsCount.value = _db.skipDomains.length;
     try {
       final repo = Get.find<FirestoreRepository>();
       await repo.saveSkipDomain(domain);
@@ -219,15 +226,14 @@ class DomainClassifier extends GetxService {
   }
 
   Future<void> deleteSkipDomain(String domain) async {
-    // Remove from local Hive
     final key = _db.skipDomains.keys.firstWhere(
       (k) => _db.skipDomains.get(k) == domain,
       orElse: () => null,
     );
     if (key != null) {
       await _db.skipDomains.delete(key);
+      skipDomainsCount.value = _db.skipDomains.length;
     }
-    // Remove from Firestore
     try {
       final repo = Get.find<FirestoreRepository>();
       await repo.deleteSkipDomain(domain);

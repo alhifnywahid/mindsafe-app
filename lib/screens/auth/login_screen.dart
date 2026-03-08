@@ -95,11 +95,14 @@ class _LoginScreenState extends State<LoginScreen>
         }
       } else {
         setState(() => _isLoading = false);
-        if (context.mounted) {
+        if (mounted) {
           showFToast(
             context: context,
             style: const FToastStyleDelta.delta(
-              constraints: BoxConstraints(minWidth: double.infinity, maxWidth: double.infinity),
+              constraints: BoxConstraints(
+                minWidth: double.infinity,
+                maxWidth: double.infinity,
+              ),
             ),
             alignment: FToastAlignment.topCenter,
             icon: const Icon(Icons.error_outline, color: Colors.red),
@@ -110,11 +113,14 @@ class _LoginScreenState extends State<LoginScreen>
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      if (context.mounted) {
+      if (mounted) {
         showFToast(
           context: context,
           style: const FToastStyleDelta.delta(
-            constraints: BoxConstraints(minWidth: double.infinity, maxWidth: double.infinity),
+            constraints: BoxConstraints(
+              minWidth: double.infinity,
+              maxWidth: double.infinity,
+            ),
           ),
           alignment: FToastAlignment.topCenter,
           icon: const Icon(Icons.error_outline, color: Colors.red),

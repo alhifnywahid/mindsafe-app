@@ -47,25 +47,6 @@ class AdminRulesScreen extends StatelessWidget {
   }
 }
 
-// ─── Admin Audit Screen ───
-class AdminAuditScreen extends StatelessWidget {
-  const AdminAuditScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = FTheme.of(context);
-    return FScaffold(
-      header: FHeader(
-        title: Text(
-          'admin_audit'.tr,
-          style: theme.typography.base.copyWith(fontWeight: FontWeight.w600),
-        ),
-      ),
-      child: _AuditLogTab(),
-    );
-  }
-}
-
 // ─── Admin Notification Screen ───
 class AdminNotificationScreen extends StatelessWidget {
   const AdminNotificationScreen({super.key});
@@ -92,7 +73,12 @@ class _DashboardTab extends StatefulWidget {
 }
 
 class _DashboardTabState extends State<_DashboardTab> {
-  Map<String, dynamic> _adminStats = {'userCount': 0, 'status': 'unknown'};
+  Map<String, dynamic> _adminStats = {'userCount': 0};
+  Map<String, dynamic> _allUserStats = {
+    'categoryBreakdown': <Map<String, dynamic>>[],
+    'domainList': <Map<String, dynamic>>[],
+    'totalEntries': 0,
+  };
   bool _loading = true;
 
   @override
@@ -103,11 +89,15 @@ class _DashboardTabState extends State<_DashboardTab> {
 
   Future<void> _loadStats() async {
     setState(() => _loading = true);
-    final firestoreRepo = Get.find<FirestoreRepository>();
-    final stats = await firestoreRepo.getAdminStats();
+    final repo = Get.find<FirestoreRepository>();
+    final results = await Future.wait([
+      repo.getAdminStats(),
+      repo.getAllUsersDomainStats(),
+    ]);
     if (mounted) {
       setState(() {
-        _adminStats = stats;
+        _adminStats = results[0];
+        _allUserStats = results[1];
         _loading = false;
       });
     }
@@ -116,36 +106,17 @@ class _DashboardTabState extends State<_DashboardTab> {
   @override
   Widget build(BuildContext context) {
     final theme = FTheme.of(context);
-    final db = Get.find<LocalDatabase>();
     final classifier = Get.find<DomainClassifier>();
-    final allAccess = db.domainAccess.values.toList();
 
-    // ── Compute stats ──
-    final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final todayAccess = allAccess
-        .where((a) => a.timestamp.isAfter(todayStart))
-        .toList();
-    final totalAccessToday = todayAccess.length;
-    final totalSecondsToday = todayAccess.fold<int>(
-      0,
-      (sum, a) => sum + a.durationSeconds,
-    );
-    final totalHoursToday = (totalSecondsToday / 3600).toStringAsFixed(1);
-
-    // Category breakdown
-    final categoryMap = <String, int>{};
-    for (final a in allAccess) {
-      categoryMap[a.category] = (categoryMap[a.category] ?? 0) + 1;
-    }
-    final sortedCategories = categoryMap.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final totalEntries = allAccess.length;
-
-    // Recent 10 entries
-    final recentAccess = List.of(allAccess)
-      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    final recent10 = recentAccess.take(10).toList();
+    // Parse all-user data
+    final categoryBreakdown =
+        (_allUserStats['categoryBreakdown'] as List?)
+            ?.cast<Map<String, dynamic>>() ??
+        [];
+    final domainList =
+        (_allUserStats['domainList'] as List?)?.cast<Map<String, dynamic>>() ??
+        [];
+    final totalEntries = (_allUserStats['totalEntries'] as int?) ?? 0;
 
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -177,26 +148,26 @@ class _DashboardTabState extends State<_DashboardTab> {
                     gradient: const [Color(0xFF3730A3), Color(0xFF4338CA)],
                   ),
                   _GradientStatCard(
-                    icon: Icons.cloud_done_rounded,
-                    label: 'admin_system_status'.tr,
-                    value: _adminStats['status'] == 'healthy'
-                        ? 'admin_healthy'.tr
-                        : '⚠️',
-                    gradient: _adminStats['status'] == 'healthy'
-                        ? const [Color(0xFF047857), Color(0xFF059669)]
-                        : const [Color(0xFFB45309), Color(0xFFD97706)],
-                  ),
-                  _GradientStatCard(
                     icon: Icons.dns_rounded,
                     label: 'admin_total_domains'.tr,
                     value: '${classifier.totalDomains.value}',
                     gradient: const [Color(0xFF9A3412), Color(0xFFC2410C)],
                   ),
-                  _GradientStatCard(
-                    icon: Icons.rule_rounded,
-                    label: 'admin_total_rules'.tr,
-                    value: '${db.domainRules.length}',
-                    gradient: const [Color(0xFF155E75), Color(0xFF0E7490)],
+                  Obx(
+                    () => _GradientStatCard(
+                      icon: Icons.rule_rounded,
+                      label: 'admin_total_rules'.tr,
+                      value: '${classifier.rulesCount.value}',
+                      gradient: const [Color(0xFF155E75), Color(0xFF0E7490)],
+                    ),
+                  ),
+                  Obx(
+                    () => _GradientStatCard(
+                      icon: Icons.block_rounded,
+                      label: 'admin_total_skip'.tr,
+                      value: '${classifier.skipDomainsCount.value}',
+                      gradient: const [Color(0xFF7C3AED), Color(0xFF8B5CF6)],
+                    ),
                   ),
                 ],
               ),
@@ -204,44 +175,27 @@ class _DashboardTabState extends State<_DashboardTab> {
 
             const SizedBox(height: 18),
 
-            // ── Today's Activity ──
+            // ── Category Breakdown (All Users) ──
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _SectionLabel('admin_today_activity'.tr, theme),
-                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      Expanded(
-                        child: _ActivityMiniCard(
-                          icon: Icons.touch_app_rounded,
-                          value: '$totalAccessToday',
-                          label: 'admin_accesses'.tr,
-                          color: const Color(0xFF6366F1),
-                          theme: theme,
+                      _SectionLabel('admin_category_breakdown'.tr, theme),
+                      const Spacer(),
+                      if (totalEntries > 0)
+                        Text(
+                          '$totalEntries ${'admin_accesses'.tr.toLowerCase()}',
+                          style: theme.typography.xs.copyWith(
+                            color: theme.colors.mutedForeground,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _ActivityMiniCard(
-                          icon: Icons.schedule_rounded,
-                          value: '$totalHoursToday h',
-                          label: 'admin_hours'.tr,
-                          color: const Color(0xFF10B981),
-                          theme: theme,
-                        ),
-                      ),
                     ],
                   ),
-
-                  const SizedBox(height: 18),
-
-                  // ── Category Breakdown ──
-                  _SectionLabel('admin_category_breakdown'.tr, theme),
                   const SizedBox(height: 8),
-                  if (sortedCategories.isEmpty)
+                  if (categoryBreakdown.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       child: Center(
@@ -256,97 +210,13 @@ class _DashboardTabState extends State<_DashboardTab> {
                   else
                     AppCard(
                       child: Column(
-                        children: sortedCategories.map((entry) {
+                        children: List.generate(categoryBreakdown.length, (i) {
+                          final entry = categoryBreakdown[i];
+                          final cat = entry['category'] as String? ?? 'safe';
+                          final visits = (entry['visits'] as int?) ?? 0;
                           final pct = totalEntries > 0
-                              ? entry.value / totalEntries
+                              ? visits / totalEntries
                               : 0.0;
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 5),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    color: _categoryColor(entry.key, theme),
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'category_${entry.key}'.tr,
-                                  style: theme.typography.sm.copyWith(
-                                    color: theme.colors.foreground,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  '${entry.value}',
-                                  style: theme.typography.sm.copyWith(
-                                    color: theme.colors.foreground,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                SizedBox(
-                                  width: 80,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: LinearProgressIndicator(
-                                      value: pct,
-                                      minHeight: 6,
-                                      backgroundColor: theme.colors.border,
-                                      valueColor: AlwaysStoppedAnimation(
-                                        _categoryColor(entry.key, theme),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                SizedBox(
-                                  width: 36,
-                                  child: Text(
-                                    '${(pct * 100).toStringAsFixed(0)}%',
-                                    style: theme.typography.xs.copyWith(
-                                      color: theme.colors.mutedForeground,
-                                    ),
-                                    textAlign: TextAlign.right,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-
-                  const SizedBox(height: 18),
-
-                  // ── Recent Activity ──
-                  _SectionLabel('admin_recent_activity'.tr, theme),
-                  const SizedBox(height: 8),
-                  if (recent10.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Center(
-                        child: Text(
-                          'admin_no_data'.tr,
-                          style: theme.typography.sm.copyWith(
-                            color: theme.colors.mutedForeground,
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    AppCard(
-                      child: Column(
-                        children: List.generate(recent10.length, (i) {
-                          final a = recent10[i];
-                          final time =
-                              '${a.timestamp.hour.toString().padLeft(2, '0')}:${a.timestamp.minute.toString().padLeft(2, '0')}';
-                          final date =
-                              '${a.timestamp.day}/${a.timestamp.month}/${a.timestamp.year}';
                           return Column(
                             children: [
                               if (i > 0)
@@ -358,64 +228,54 @@ class _DashboardTabState extends State<_DashboardTab> {
                                 child: Row(
                                   children: [
                                     Container(
-                                      width: 8,
-                                      height: 8,
+                                      width: 10,
+                                      height: 10,
                                       decoration: BoxDecoration(
-                                        color: _categoryColor(
-                                          a.category,
-                                          theme,
-                                        ),
-                                        shape: BoxShape.circle,
+                                        color: _categoryColor(cat, theme),
+                                        borderRadius: BorderRadius.circular(3),
                                       ),
                                     ),
-                                    const SizedBox(width: 10),
+                                    const SizedBox(width: 8),
                                     Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            a.domain,
-                                            style: theme.typography.sm.copyWith(
-                                              color: theme.colors.foreground,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 3),
-                                          Text(
-                                            '$date  $time',
-                                            style: theme.typography.xs.copyWith(
-                                              color:
-                                                  theme.colors.mutedForeground,
-                                            ),
-                                          ),
-                                        ],
+                                      child: Text(
+                                        'category_$cat'.tr,
+                                        style: theme.typography.sm.copyWith(
+                                          color: theme.colors.foreground,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
+                                    Text(
+                                      '$visits',
+                                      style: theme.typography.sm.copyWith(
+                                        color: theme.colors.foreground,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: _categoryColor(
-                                          a.category,
-                                          theme,
-                                        ).withValues(alpha: 0.15),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    SizedBox(
+                                      width: 72,
+                                      child: ClipRRect(
                                         borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        'category_${a.category}'.tr,
-                                        style: theme.typography.xs.copyWith(
-                                          color: _categoryColor(
-                                            a.category,
-                                            theme,
+                                        child: LinearProgressIndicator(
+                                          value: pct,
+                                          minHeight: 6,
+                                          backgroundColor: theme.colors.border,
+                                          valueColor: AlwaysStoppedAnimation(
+                                            _categoryColor(cat, theme),
                                           ),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10,
                                         ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    SizedBox(
+                                      width: 34,
+                                      child: Text(
+                                        '${(pct * 100).toStringAsFixed(0)}%',
+                                        style: theme.typography.xs.copyWith(
+                                          color: theme.colors.mutedForeground,
+                                        ),
+                                        textAlign: TextAlign.right,
                                       ),
                                     ),
                                   ],
@@ -429,51 +289,90 @@ class _DashboardTabState extends State<_DashboardTab> {
 
                   const SizedBox(height: 18),
 
-                  // ── Refresh ──
-                  GestureDetector(
-                    onTap: () async {
-                      await _loadStats();
-                      setState(() {});
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF6366F1), Color(0xFF818CF8)],
+                  // ── Domain List (All Users, sorted by duration) ──
+                  _SectionLabel('admin_all_domains'.tr, theme),
+                  const SizedBox(height: 8),
+                  if (domainList.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: Text(
+                          'admin_no_data'.tr,
+                          style: theme.typography.sm.copyWith(
+                            color: theme.colors.mutedForeground,
+                          ),
                         ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xFF6366F1,
-                            ).withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.refresh,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'admin_refresh'.tr,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
+                    )
+                  else
+                    AppCard(
+                      child: Column(
+                        children: List.generate(domainList.length, (i) {
+                          final d = domainList[i];
+                          final domain = d['domain'] as String? ?? '';
+                          final visits = (d['visits'] as int?) ?? 0;
+                          final durSec = (d['durationSeconds'] as int?) ?? 0;
+                          final cat = d['category'] as String? ?? 'safe';
+                          final dur = _formatDuration(durSec);
+                          return Column(
+                            children: [
+                              if (i > 0)
+                                Divider(color: theme.colors.border, height: 1),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 7,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: _categoryColor(cat, theme),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        domain,
+                                        style: theme.typography.sm.copyWith(
+                                          color: theme.colors.foreground,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          dur,
+                                          style: theme.typography.xs.copyWith(
+                                            color: theme.colors.foreground,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          '$visits ${'admin_visits'.tr}',
+                                          style: theme.typography.xs.copyWith(
+                                            color: theme.colors.mutedForeground,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        }),
                       ),
                     ),
-                  ),
 
                   const SizedBox(height: AppSpacing.xl),
                 ],
@@ -483,6 +382,22 @@ class _DashboardTabState extends State<_DashboardTab> {
         ),
       ),
     );
+  }
+
+  String _formatDuration(int seconds) {
+    if (seconds >= 86400) {
+      final d = seconds ~/ 86400;
+      return '$d ${'duration_days'.tr}';
+    }
+    if (seconds >= 3600) {
+      final h = seconds ~/ 3600;
+      return '$h ${'duration_hours'.tr}';
+    }
+    if (seconds >= 60) {
+      final m = seconds ~/ 60;
+      return '$m ${'duration_minutes'.tr}';
+    }
+    return '$seconds ${'duration_seconds'.tr}';
   }
 
   Color _categoryColor(String category, FThemeData theme) {
@@ -583,69 +498,6 @@ class _GradientStatCard extends StatelessWidget {
   }
 }
 
-// ─── Activity Mini Card ───
-class _ActivityMiniCard extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color color;
-  final FThemeData theme;
-
-  const _ActivityMiniCard({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.colors.border),
-        color: color.withValues(alpha: 0.06),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colors.foreground,
-                  ),
-                ),
-                Text(
-                  label,
-                  style: theme.typography.xs.copyWith(
-                    color: theme.colors.mutedForeground,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ─── Section Label ───
 class _SectionLabel extends StatelessWidget {
   final String title;
@@ -696,44 +548,70 @@ class _DomainRulesTabState extends State<_DomainRulesTab>
     final theme = FTheme.of(context);
     final db = Get.find<LocalDatabase>();
 
-    return Column(
+    return Stack(
       children: [
-        // ── Tab Selector ──
-        TabBar(
-          controller: _tabController,
-          labelColor: theme.colors.primary,
-          unselectedLabelColor: theme.colors.mutedForeground,
-          indicator: const BoxDecoration(),
-          indicatorSize: TabBarIndicatorSize.tab,
-          tabs: [
-            Tab(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.rule_rounded, size: 18),
-                  const SizedBox(width: 6),
-                  Text('admin_tab_rules'.tr),
-                ],
-              ),
+        Column(
+          children: [
+            // ── Tab Selector ──
+            TabBar(
+              controller: _tabController,
+              labelColor: theme.colors.primary,
+              unselectedLabelColor: theme.colors.mutedForeground,
+              indicator: const BoxDecoration(),
+              indicatorSize: TabBarIndicatorSize.tab,
+              tabs: [
+                Tab(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.rule_rounded, size: 18),
+                      const SizedBox(width: 6),
+                      Text('admin_tab_rules'.tr),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.block_rounded, size: 18),
+                      const SizedBox(width: 6),
+                      Text('admin_tab_skip'.tr),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Tab(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.block_rounded, size: 18),
-                  const SizedBox(width: 6),
-                  Text('admin_tab_skip'.tr),
-                ],
+
+            // ── Tab Views ──
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [_buildRulesTab(theme, db), _buildSkipTab(theme, db)],
               ),
             ),
           ],
         ),
 
-        // ── Tab Views ──
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [_buildRulesTab(theme, db), _buildSkipTab(theme, db)],
+        // ── FAB (changes per active tab) ──
+        Positioned(
+          right: 16,
+          bottom: 24,
+          child: AnimatedBuilder(
+            animation: _tabController,
+            builder: (context, _) {
+              final isRulesTab = _tabController.index == 0;
+              return FloatingActionButton(
+                heroTag: 'rules_fab',
+                onPressed: () => isRulesTab
+                    ? _showAddRuleDialog(context, db, theme)
+                    : _showAddSkipDialog(context, db, theme),
+                backgroundColor: isRulesTab
+                    ? const Color(0xFF4338CA)
+                    : const Color(0xFFC2410C),
+                child: const Icon(Icons.add_rounded, color: Colors.white),
+              );
+            },
           ),
         ),
       ],
@@ -744,48 +622,10 @@ class _DomainRulesTabState extends State<_DomainRulesTab>
   Widget _buildRulesTab(FThemeData theme, LocalDatabase db) {
     final rules = db.domainRules.values.toList();
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(6, 12, 6, 88),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            onTap: () => _showAddRuleDialog(context, db, theme),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF3730A3), Color(0xFF4338CA)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF3730A3).withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'admin_add_rule'.tr,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
           if (rules.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 32),
@@ -950,48 +790,10 @@ class _DomainRulesTabState extends State<_DomainRulesTab>
   Widget _buildSkipTab(FThemeData theme, LocalDatabase db) {
     final skipDomains = db.skipDomains.values.toList();
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(6, 12, 6, 88),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            onTap: () => _showAddSkipDialog(context, db, theme),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF9A3412), Color(0xFFC2410C)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF9A3412).withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'admin_add_skip'.tr,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
           if (skipDomains.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 32),
@@ -1154,99 +956,146 @@ class _DomainRulesTabState extends State<_DomainRulesTab>
   ) {
     final patternCtrl = TextEditingController();
     String selectedCategory = 'safe';
+    const categories = [
+      'safe',
+      'adult',
+      'gambling',
+      'phishing',
+      'malware',
+      'cryptojacking',
+      'drugs',
+      'hacking',
+      'dangerous',
+      'dating',
+      'ddos',
+      'warez',
+    ];
 
-    showDialog(
+    showFSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: theme.colors.background,
-        title: Text(
-          'admin_add_domain_rule'.tr,
-          style: theme.typography.lg.copyWith(color: theme.colors.foreground),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+      side: FLayout.btt,
+      mainAxisMaxRatio: null,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => AppBottomSheet(
           children: [
-            TextField(
-              controller: patternCtrl,
-              style: TextStyle(color: theme.colors.foreground),
-              decoration: InputDecoration(
-                labelText: 'admin_domain_pattern'.tr,
-                hintText: 'admin_domain_hint'.tr,
-                labelStyle: TextStyle(color: theme.colors.mutedForeground),
-                hintStyle: TextStyle(color: theme.colors.mutedForeground),
+            Text(
+              'admin_add_domain_rule'.tr,
+              style: theme.typography.lg.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colors.foreground,
               ),
             ),
-            const SizedBox(height: 12),
-            StatefulBuilder(
-              builder: (context, setLocalState) {
-                return DropdownButton<String>(
-                  value: selectedCategory,
-                  isExpanded: true,
-                  dropdownColor: theme.colors.background,
-                  style: TextStyle(color: theme.colors.foreground),
-                  items:
-                      [
-                            'safe',
-                            'adult',
-                            'gambling',
-                            'phishing',
-                            'malware',
-                            'cryptojacking',
-                            'drugs',
-                            'hacking',
-                            'dangerous',
-                            'dating',
-                            'ddos',
-                            'warez',
-                          ]
-                          .map(
-                            (c) => DropdownMenuItem(
-                              value: c,
-                              child: Text('category_$c'.tr),
-                            ),
-                          )
-                          .toList(),
-                  onChanged: (v) {
-                    if (v != null) {
-                      selectedCategory = v;
-                      setLocalState(() {});
-                    }
-                  },
+            const SizedBox(height: 16),
+            Material(
+              color: Colors.transparent,
+              child: TextField(
+                controller: patternCtrl,
+                autofocus: true,
+                style: TextStyle(color: theme.colors.foreground),
+                decoration: InputDecoration(
+                  labelText: 'admin_domain_pattern'.tr,
+                  hintText: 'admin_domain_hint'.tr,
+                  labelStyle: TextStyle(color: theme.colors.mutedForeground),
+                  hintStyle: TextStyle(color: theme.colors.mutedForeground),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: theme.colors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(
+                      color: theme.colors.primary,
+                      width: 1.5,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: theme.colors.muted.withValues(alpha: 0.15),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'admin_select_category'.tr,
+              style: theme.typography.sm.copyWith(
+                color: theme.colors.mutedForeground,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: categories.map((cat) {
+                final isSelected = selectedCategory == cat;
+                final catColor = _categoryColor(cat, theme);
+                return GestureDetector(
+                  onTap: () => setSheetState(() => selectedCategory = cat),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? catColor.withValues(alpha: 0.18)
+                          : theme.colors.muted.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected ? catColor : theme.colors.border,
+                        width: isSelected ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Text(
+                      'category_$cat'.tr,
+                      style: theme.typography.xs.copyWith(
+                        color: isSelected
+                            ? catColor
+                            : theme.colors.mutedForeground,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                      ),
+                    ),
+                  ),
                 );
-              },
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: FButton(
+                    variant: FButtonVariant.outline,
+                    onPress: () => Navigator.pop(ctx),
+                    child: Text('dialog_cancel'.tr),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FButton(
+                    onPress: () {
+                      if (patternCtrl.text.isNotEmpty) {
+                        final id = DateTime.now().millisecondsSinceEpoch
+                            .toString();
+                        final rule = DomainRule(
+                          id: id,
+                          pattern: patternCtrl.text.trim(),
+                          category: selectedCategory,
+                          priority: 5,
+                        );
+                        Get.find<DomainClassifier>().addRule(rule);
+                        Navigator.pop(ctx);
+                        setState(() {});
+                      }
+                    },
+                    child: Text('dialog_add'.tr),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'dialog_cancel'.tr,
-              style: TextStyle(color: theme.colors.mutedForeground),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              if (patternCtrl.text.isNotEmpty) {
-                final id = DateTime.now().millisecondsSinceEpoch.toString();
-                final rule = DomainRule(
-                  id: id,
-                  pattern: patternCtrl.text.trim(),
-                  category: selectedCategory,
-                  priority: 5,
-                );
-                final classifier = Get.find<DomainClassifier>();
-                classifier.addRule(rule);
-                Navigator.pop(ctx);
-                setState(() {});
-              }
-            },
-            child: Text(
-              'dialog_add'.tr,
-              style: TextStyle(color: theme.colors.primary),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1258,57 +1107,79 @@ class _DomainRulesTabState extends State<_DomainRulesTab>
   ) {
     final domainCtrl = TextEditingController();
 
-    showDialog(
+    showFSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: theme.colors.background,
-        title: Text(
-          'admin_add_skip'.tr,
-          style: theme.typography.lg.copyWith(color: theme.colors.foreground),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'admin_skip_explanation'.tr,
-              style: theme.typography.xs.copyWith(
-                color: theme.colors.mutedForeground,
-              ),
+      side: FLayout.btt,
+      mainAxisMaxRatio: null,
+      builder: (ctx) => AppBottomSheet(
+        children: [
+          Text(
+            'admin_add_skip'.tr,
+            style: theme.typography.lg.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colors.foreground,
             ),
-            const SizedBox(height: 12),
-            TextField(
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'admin_skip_explanation'.tr,
+            style: theme.typography.sm.copyWith(
+              color: theme.colors.mutedForeground,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Material(
+            color: Colors.transparent,
+            child: TextField(
               controller: domainCtrl,
+              autofocus: true,
               style: TextStyle(color: theme.colors.foreground),
               decoration: InputDecoration(
                 labelText: 'admin_skip_domain_label'.tr,
                 hintText: 'admin_skip_hint'.tr,
                 labelStyle: TextStyle(color: theme.colors.mutedForeground),
                 hintStyle: TextStyle(color: theme.colors.mutedForeground),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: theme.colors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(
+                    color: theme.colors.primary,
+                    width: 1.5,
+                  ),
+                ),
+                filled: true,
+                fillColor: theme.colors.muted.withValues(alpha: 0.15),
               ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'dialog_cancel'.tr,
-              style: TextStyle(color: theme.colors.mutedForeground),
-            ),
           ),
-          TextButton(
-            onPressed: () async {
-              final domain = domainCtrl.text.trim().toLowerCase();
-              if (domain.isNotEmpty) {
-                Navigator.pop(ctx);
-                await Get.find<DomainClassifier>().addSkipDomain(domain);
-                setState(() {});
-              }
-            },
-            child: Text(
-              'dialog_add'.tr,
-              style: TextStyle(color: theme.colors.primary),
-            ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: FButton(
+                  variant: FButtonVariant.outline,
+                  onPress: () => Navigator.pop(ctx),
+                  child: Text('dialog_cancel'.tr),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FButton(
+                  onPress: () async {
+                    final domain = domainCtrl.text.trim().toLowerCase();
+                    if (domain.isNotEmpty) {
+                      Navigator.pop(ctx);
+                      await Get.find<DomainClassifier>().addSkipDomain(domain);
+                      setState(() {});
+                    }
+                  },
+                  child: Text('dialog_add'.tr),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1337,41 +1208,6 @@ class _DomainRulesTabState extends State<_DomainRulesTab>
       default:
         return theme.colors.mutedForeground;
     }
-  }
-}
-
-// ─── Audit Log Tab ───
-class _AuditLogTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final theme = FTheme.of(context);
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.receipt_long,
-            size: 64,
-            color: theme.colors.mutedForeground,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'admin_no_audit'.tr,
-            style: theme.typography.lg.copyWith(
-              color: theme.colors.mutedForeground,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'admin_audit_desc'.tr,
-            style: theme.typography.sm.copyWith(
-              color: theme.colors.mutedForeground,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -1434,90 +1270,63 @@ class _NotificationTabState extends State<_NotificationTab> {
   Widget build(BuildContext context) {
     final theme = FTheme.of(context);
 
-    return Column(
+    return Stack(
       children: [
-        // ─── Compose button ───
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: GestureDetector(
-            onTap: () => _showComposeSheet(context, theme),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    theme.colors.primary,
-                    theme.colors.primary.withValues(alpha: 0.8),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.colors.primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    'admin_notif_compose'.tr,
-                    style: theme.typography.sm.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+        Column(
+          children: [
+            const SizedBox(height: 16),
+            // ─── History list ───
+            Expanded(
+              child: !_historyLoaded
+                  ? const Center(child: CircularProgressIndicator())
+                  : _history.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.notifications_off_outlined,
+                            size: 56,
+                            color: theme.colors.mutedForeground.withValues(
+                              alpha: 0.4,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'admin_notif_empty'.tr,
+                            style: theme.typography.sm.copyWith(
+                              color: theme.colors.mutedForeground,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _loadHistory,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+                        itemCount: _history.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final notif = _history[index];
+                          return _buildNotifCard(notif, theme);
+                        },
+                      ),
                     ),
-                  ),
-                ],
-              ),
             ),
-          ),
+          ],
         ),
 
-        const SizedBox(height: 16),
-
-        // ─── History list ───
-        Expanded(
-          child: !_historyLoaded
-              ? const Center(child: CircularProgressIndicator())
-              : _history.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.notifications_off_outlined,
-                        size: 56,
-                        color: theme.colors.mutedForeground.withValues(
-                          alpha: 0.4,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'admin_notif_empty'.tr,
-                        style: theme.typography.sm.copyWith(
-                          color: theme.colors.mutedForeground,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadHistory,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _history.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final notif = _history[index];
-                      return _buildNotifCard(notif, theme);
-                    },
-                  ),
-                ),
+        // ─── FAB ───
+        Positioned(
+          right: 16,
+          bottom: 24,
+          child: FloatingActionButton(
+            heroTag: 'notif_fab',
+            onPressed: () => _showComposeSheet(context, theme),
+            backgroundColor: theme.colors.primary,
+            child: const Icon(Icons.send_rounded, color: Colors.white),
+          ),
         ),
       ],
     );
@@ -1866,7 +1675,8 @@ class _NotificationTabState extends State<_NotificationTab> {
                                         context: context,
                                         style: const FToastStyleDelta.delta(
                                           constraints: BoxConstraints(
-                                            minWidth: double.infinity, maxWidth: double.infinity,
+                                            minWidth: double.infinity,
+                                            maxWidth: double.infinity,
                                           ),
                                         ),
                                         alignment: FToastAlignment.topCenter,
@@ -1897,7 +1707,8 @@ class _NotificationTabState extends State<_NotificationTab> {
                                         context: context,
                                         style: const FToastStyleDelta.delta(
                                           constraints: BoxConstraints(
-                                            minWidth: double.infinity, maxWidth: double.infinity,
+                                            minWidth: double.infinity,
+                                            maxWidth: double.infinity,
                                           ),
                                         ),
                                         alignment: FToastAlignment.topCenter,
@@ -1916,7 +1727,8 @@ class _NotificationTabState extends State<_NotificationTab> {
                                         context: context,
                                         style: const FToastStyleDelta.delta(
                                           constraints: BoxConstraints(
-                                            minWidth: double.infinity, maxWidth: double.infinity,
+                                            minWidth: double.infinity,
+                                            maxWidth: double.infinity,
                                           ),
                                         ),
                                         alignment: FToastAlignment.topCenter,
@@ -2023,7 +1835,10 @@ class _NotificationTabState extends State<_NotificationTab> {
         showFToast(
           context: context,
           style: const FToastStyleDelta.delta(
-            constraints: BoxConstraints(minWidth: double.infinity, maxWidth: double.infinity),
+            constraints: BoxConstraints(
+              minWidth: double.infinity,
+              maxWidth: double.infinity,
+            ),
           ),
           alignment: FToastAlignment.topCenter,
           icon: const Icon(Icons.error_outline, color: Colors.red),

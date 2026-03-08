@@ -28,16 +28,12 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen>
     with TickerProviderStateMixin {
   ChartPeriod _selectedPeriod = ChartPeriod.weekly;
-  bool _todayExpanded = false;
-  bool _weekExpanded = false;
-  bool _monthExpanded = false;
 
   late final TabController _tabController;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   final Map<String, bool> _calCategoryExpanded = {};
   final Map<String, bool> _calShowAll = {};
-  final Map<String, bool> _tlShowAll = {};
 
   @override
   void initState() {
@@ -105,7 +101,9 @@ class _HistoryScreenState extends State<HistoryScreen>
               final allAccesses = db.userDomainAccess(userId)
                 ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-              controller.todayDomainCount.value;
+              controller
+                  .accessCount
+                  .value; // rebuilds on every new access record
 
               if (allAccesses.isEmpty) {
                 return Center(
@@ -154,398 +152,570 @@ class _HistoryScreenState extends State<HistoryScreen>
 
   // ─── TAB 1: Overview ───
   Widget _buildOverviewTab(FThemeData theme, List<dynamic> allAccesses) {
-    final chartData = _buildChartData(allAccesses, _selectedPeriod);
-    final chartTitle = _getChartTitle(_selectedPeriod);
-    final categoryData = _buildCategoryData(allAccesses);
+    final categoryChartData = _buildChartDataByCategory(
+      allAccesses,
+      _selectedPeriod,
+    );
+    const accent = Color(0xFF6C63FF);
 
-    final grouped = <String, List<dynamic>>{};
-    for (final access in allAccesses) {
-      final dateKey = _formatDate(access.timestamp);
-      grouped.putIfAbsent(dateKey, () => []).add(access);
+    // x-axis labels: always use full slot list (not from first category)
+    // so all categories have aligned points regardless of when they appeared
+    final xLabels = switch (_selectedPeriod) {
+      ChartPeriod.daily => _buildDailyData([]),
+      ChartPeriod.weekly => _buildWeeklyData([]),
+      ChartPeriod.monthly => _buildMonthlyData([]),
+    };
+
+    final hasData = categoryChartData.values.any(
+      (pts) => pts.any((p) => p.value > 0),
+    );
+
+    // ── Stat chips: Total Durasi, % Berbahaya, Jam Tersibuk ──
+    // Total duration across all accesses (all-time for overview)
+    final int totalSeconds = allAccesses.fold<int>(
+      0,
+      (s, a) => s + (a.durationSeconds as int? ?? 0),
+    );
+
+    // % unsafe content (adult + gambling)
+    final int totalRecs = allAccesses.length;
+    final int unsafeRecs = allAccesses
+        .where((a) => a.category == 'adult' || a.category == 'gambling')
+        .length;
+    final int unsafePct = totalRecs > 0
+        ? ((unsafeRecs / totalRecs) * 100).round()
+        : 0;
+
+    // Peak hour (today only)
+    final now2 = DateTime.now();
+    final todayStartStat = DateTime(now2.year, now2.month, now2.day);
+    final hourCounts = List.filled(24, 0);
+    for (final a in allAccesses) {
+      if (!a.timestamp.isAfter(todayStartStat)) continue;
+      final h = (a.timestamp as DateTime).hour;
+      hourCounts[h] += 1;
     }
+    final peakHour = hourCounts.indexOf(
+      hourCounts.reduce((a, b) => a > b ? a : b),
+    );
+    final peakHourLabel = hourCounts.reduce((a, b) => a > b ? a : b) == 0
+        ? '--'
+        : '${peakHour.toString().padLeft(2, '0')}:00';
 
-    // ─── Premium section builder (borderless) ───
-    Widget sectionContainer({
+    Widget card({
       required Widget child,
-      EdgeInsetsGeometry? padding,
+      bool noPad = false,
+      bool bordered = false,
     }) {
       return Container(
         decoration: BoxDecoration(
           color: theme.colors.background,
-          borderRadius: BorderRadius.circular(18),
+          border: bordered
+              ? Border.all(
+                  color: theme.colors.border.withValues(alpha: 0.5),
+                  width: 1,
+                )
+              : null,
+          borderRadius: bordered ? BorderRadius.circular(12) : null,
           boxShadow: [
             BoxShadow(
-              color: theme.colors.primary.withValues(alpha: 0.05),
-              blurRadius: 20,
-              spreadRadius: 0,
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 16,
               offset: const Offset(0, 4),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
             ),
           ],
         ),
-        padding: padding ?? const EdgeInsets.all(16),
+        margin: bordered
+            ? const EdgeInsets.symmetric(horizontal: 6)
+            : EdgeInsets.zero,
+        padding: noPad
+            ? null
+            : const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: child,
       );
     }
 
-    Widget sectionTitle(String text) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Text(
-          text,
-          style: theme.typography.base.copyWith(
-            fontWeight: FontWeight.w700,
-            color: theme.colors.foreground,
-            letterSpacing: 0.2,
-          ),
-        ),
-      );
-    }
+    Widget sectionLabel(String text) => Text(
+      text,
+      style: theme.typography.sm.copyWith(
+        fontWeight: FontWeight.w700,
+        color: theme.colors.foreground,
+        letterSpacing: 0.3,
+      ),
+    );
 
     return ListView(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.zero,
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
+        card(
+          noPad: true,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              sectionTitle(chartTitle),
-              Column(
-                children: [
-                  const SizedBox(height: AppSpacing.sm),
-                  // Period selector
-                  Container(
-                    decoration: BoxDecoration(
-                      color: theme.colors.muted.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.all(3),
-                    child: Row(
-                      children: ChartPeriod.values.map((period) {
-                        final isSelected = _selectedPeriod == period;
-                        return Expanded(
-                          child: GestureDetector(
-                            onTap: () =>
-                                setState(() => _selectedPeriod = period),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+                child: Row(
+                  children: [
+                    Expanded(child: sectionLabel('history_chart_activity'.tr)),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: theme.colors.muted.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.all(3),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: ChartPeriod.values.map((p) {
+                          final sel = _selectedPeriod == p;
+                          return GestureDetector(
+                            onTap: () => setState(() => _selectedPeriod = p),
                             child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOut,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 11,
+                                vertical: 5,
+                              ),
                               decoration: BoxDecoration(
-                                color: isSelected
-                                    ? theme.colors.foreground
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(6),
-                                boxShadow: isSelected
+                                color: sel ? accent : Colors.transparent,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: sel
                                     ? [
                                         BoxShadow(
-                                          color: theme.colors.foreground
-                                              .withValues(alpha: 0.08),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 1),
+                                          color: accent.withValues(alpha: 0.35),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
                                         ),
                                       ]
                                     : null,
                               ),
                               child: Text(
-                                _getPeriodLabel(period),
-                                textAlign: TextAlign.center,
-                                style: theme.typography.sm.copyWith(
-                                  color: isSelected
-                                      ? theme.colors.background
+                                _getPeriodLabel(p),
+                                style: theme.typography.xs.copyWith(
+                                  color: sel
+                                      ? Colors.white
                                       : theme.colors.mutedForeground,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
+                                  fontWeight: sel
+                                      ? FontWeight.w700
                                       : FontWeight.normal,
+                                  fontSize: 11,
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ),
                     ),
-                  ),
-
-                  const SizedBox(height: AppSpacing.md),
-
-                  // Chart
-                  SizedBox(
-                    height: 200,
-                    child: BarChart(
-                      BarChartData(
-                        alignment: BarChartAlignment.spaceAround,
-                        maxY: chartData.isEmpty
-                            ? 10
-                            : chartData
-                                      .map((e) => e.value)
-                                      .reduce((a, b) => a > b ? a : b) *
-                                  1.3,
-                        barTouchData: BarTouchData(
-                          touchTooltipData: BarTouchTooltipData(
-                            tooltipRoundedRadius: 8,
-                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                              final label = groupIndex < chartData.length
-                                  ? chartData[groupIndex].tooltip
-                                  : '';
-                              return BarTooltipItem(
-                                '$label\n${rod.toY.round()} ${'home_domains'.tr}',
-                                TextStyle(
-                                  color: theme.colors.foreground,
-                                  fontSize: 12,
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 190,
+                child: !hasData
+                    ? Center(
+                        child: Text(
+                          'history_no_data'.tr,
+                          style: theme.typography.xs.copyWith(
+                            color: theme.colors.mutedForeground,
+                          ),
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.fromLTRB(6, 0, 14, 0),
+                        child: LineChart(
+                          LineChartData(
+                            gridData: FlGridData(
+                              show: true,
+                              drawVerticalLine: false,
+                              horizontalInterval: _getGridInterval(xLabels),
+                              getDrawingHorizontalLine: (_) => FlLine(
+                                color: theme.colors.border.withValues(
+                                  alpha: 0.18,
+                                ),
+                                strokeWidth: 1,
+                              ),
+                            ),
+                            borderData: FlBorderData(show: false),
+                            titlesData: FlTitlesData(
+                              topTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              rightTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 28,
+                                  getTitlesWidget: (v, _) => Text(
+                                    v.toInt().toString(),
+                                    style: theme.typography.xs.copyWith(
+                                      color: theme.colors.mutedForeground,
+                                      fontSize: 9,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 26,
+                                  interval: 1,
+                                  getTitlesWidget: (v, meta) {
+                                    final idx = v.toInt();
+                                    if (idx < 0 || idx >= xLabels.length) {
+                                      return const SizedBox();
+                                    }
+                                    final lbl = xLabels[idx].label;
+                                    if (lbl.isEmpty) return const SizedBox();
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        lbl,
+                                        style: theme.typography.xs.copyWith(
+                                          color: theme.colors.mutedForeground,
+                                          fontSize:
+                                              _selectedPeriod ==
+                                                  ChartPeriod.monthly
+                                              ? 8
+                                              : 10,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                            lineTouchData: LineTouchData(
+                              touchTooltipData: LineTouchTooltipData(
+                                getTooltipColor: (_) => theme.colors.background,
+                                tooltipRoundedRadius: 10,
+                                fitInsideHorizontally: true,
+                                fitInsideVertically: true,
+                                getTooltipItems: (spots) {
+                                  final cats = categoryChartData.keys.toList();
+                                  return spots.asMap().entries.map((e) {
+                                    final spot = e.value;
+                                    final idx = spot.x.toInt();
+                                    final catIdx = e.key;
+                                    final cat = catIdx < cats.length
+                                        ? cats[catIdx]
+                                        : '';
+                                    final timeLabel = idx < xLabels.length
+                                        ? xLabels[idx].tooltip
+                                        : '';
+                                    final catColor = _categoryColor2(cat);
+                                    return LineTooltipItem(
+                                      catIdx == 0 ? '$timeLabel\n' : '',
+                                      theme.typography.xs.copyWith(
+                                        color: theme.colors.mutedForeground,
+                                        fontSize: 10,
+                                      ),
+                                      children: [
+                                        TextSpan(
+                                          text: '$cat: ${spot.y.round()}',
+                                          style: TextStyle(
+                                            color: catColor,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList();
+                                },
+                              ),
+                              handleBuiltInTouches: true,
+                            ),
+                            minY: 0,
+                            lineBarsData: categoryChartData.entries.map((
+                              entry,
+                            ) {
+                              final cat = entry.key;
+                              final pts = entry.value;
+                              final color = _categoryColor2(cat);
+                              return LineChartBarData(
+                                spots: List.generate(
+                                  pts.length,
+                                  (i) => FlSpot(i.toDouble(), pts[i].value),
+                                ),
+                                isCurved: true,
+                                curveSmoothness: 0.35,
+                                color: color,
+                                barWidth: 2.5,
+                                isStrokeCapRound: true,
+                                dotData: FlDotData(
+                                  show: pts.length <= 7,
+                                  getDotPainter: (_, __, ___, ____) =>
+                                      FlDotCirclePainter(
+                                        radius: 3.5,
+                                        color: color,
+                                        strokeWidth: 1.5,
+                                        strokeColor: theme.colors.background,
+                                      ),
+                                ),
+                                belowBarData: BarAreaData(
+                                  show: categoryChartData.length == 1,
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      color.withValues(alpha: 0.2),
+                                      color.withValues(alpha: 0.0),
+                                    ],
+                                  ),
                                 ),
                               );
-                            },
+                            }).toList(),
                           ),
-                        ),
-                        titlesData: FlTitlesData(
-                          topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 30,
-                              getTitlesWidget: (value, meta) => Text(
-                                value.toInt().toString(),
-                                style: theme.typography.xs.copyWith(
-                                  color: theme.colors.mutedForeground,
-                                ),
-                              ),
-                            ),
-                          ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 28,
-                              getTitlesWidget: (value, meta) {
-                                final idx = value.toInt();
-                                if (idx < chartData.length) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      chartData[idx].label,
-                                      style: theme.typography.xs.copyWith(
-                                        color: theme.colors.mutedForeground,
-                                        fontSize:
-                                            _selectedPeriod ==
-                                                ChartPeriod.monthly
-                                            ? 9
-                                            : 11,
-                                      ),
-                                    ),
-                                  );
-                                }
-                                return const SizedBox();
-                              },
-                            ),
-                          ),
-                        ),
-                        gridData: FlGridData(
-                          show: true,
-                          drawVerticalLine: false,
-                          horizontalInterval: _getGridInterval(chartData),
-                          getDrawingHorizontalLine: (value) => FlLine(
-                            color: theme.colors.border.withValues(alpha: 0.3),
-                            strokeWidth: 1,
-                          ),
-                        ),
-                        borderData: FlBorderData(show: false),
-                        barGroups: List.generate(
-                          chartData.length,
-                          (i) => BarChartGroupData(
-                            x: i,
-                            barRods: [
-                              BarChartRodData(
-                                toY: chartData[i].value,
-                                color: theme.colors.primary,
-                                width: _getBarWidth(
-                                  _selectedPeriod,
-                                  chartData.length,
-                                ),
-                                borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(4),
-                                ),
-                              ),
-                            ],
-                          ),
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeInOut,
                         ),
                       ),
-                      duration: const Duration(milliseconds: 300),
+              ),
+              // ── Legend ──
+              if (categoryChartData.length > 1)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                  child: Wrap(
+                    spacing: 12,
+                    runSpacing: 4,
+                    children: categoryChartData.keys.map((cat) {
+                      final color = _categoryColor2(cat);
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 14,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: color,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            cat,
+                            style: theme.typography.xs.copyWith(
+                              color: theme.colors.mutedForeground,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              // ─── Unified Stat Card (Home-style: border, icon, value) ───
+              Padding(
+                padding: const EdgeInsets.fromLTRB(6, 8, 6, 0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: theme.colors.border),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 14,
+                  ),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      children: [
+                        _StatChip(
+                          icon: Icons.timer_outlined,
+                          label: 'history_stat_duration'.tr,
+                          value: () {
+                            if (totalSeconds <= 0) return '0 dtk';
+                            final h = totalSeconds ~/ 3600;
+                            final m = (totalSeconds % 3600) ~/ 60;
+                            final s = totalSeconds % 60;
+                            if (h > 0) return '$h j';
+                            if (m > 0) return '$m mnt';
+                            return '$s dtk';
+                          }(),
+                          accent: accent,
+                          theme: theme,
+                        ),
+                        VerticalDivider(
+                          color: theme.colors.border.withValues(alpha: 0.4),
+                          thickness: 1,
+                          indent: 4,
+                          endIndent: 4,
+                        ),
+                        _StatChip(
+                          icon: Icons.warning_amber_rounded,
+                          label: 'history_stat_dangerous'.tr,
+                          value: '$unsafePct%',
+                          accent: theme.colors.error,
+                          theme: theme,
+                        ),
+                        VerticalDivider(
+                          color: theme.colors.border.withValues(alpha: 0.4),
+                          thickness: 1,
+                          indent: 4,
+                          endIndent: 4,
+                        ),
+                        _StatChip(
+                          icon: Icons.access_time_rounded,
+                          label: 'history_stat_peak_hour'.tr,
+                          value: peakHourLabel,
+                          accent: const Color(0xFFF59E0B),
+                          theme: theme,
+                        ),
+                      ],
                     ),
                   ),
-
-                  const SizedBox(height: AppSpacing.sm),
-                  _buildSummaryRow(chartData, theme),
-                ],
+                ),
               ),
             ],
           ),
         ),
-
-        const SizedBox(height: AppSpacing.md),
-
-        // Categories
-        if (categoryData.isNotEmpty)
-          sectionContainer(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                sectionTitle('history_categories'.tr),
-                ...categoryData.entries.map((entry) {
-                  final total = categoryData.values.fold<int>(
-                    0,
-                    (sum, v) => sum + v,
-                  );
-                  final pct = total > 0
-                      ? (entry.value / total * 100).round()
-                      : 0;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: _categoryColor(entry.key, theme),
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            entry.key,
-                            style: theme.typography.sm.copyWith(
-                              color: theme.colors.foreground,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _categoryColor(
-                              entry.key,
-                              theme,
-                            ).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            '${entry.value} ($pct%)',
-                            style: theme.typography.xs.copyWith(
-                              color: _categoryColor(entry.key, theme),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-
-        const SizedBox(height: AppSpacing.md),
-
-        // Top Domains by Duration
         Builder(
           builder: (context) {
-            // Aggregate per root-domain: total seconds + visit count
+            final now = DateTime.now();
+            final todayStart = DateTime(now.year, now.month, now.day);
+
             final domainStats = <String, _DomainStat>{};
             for (final access in allAccesses) {
+              // Only count records from today to match Home Screen
+              if (!access.timestamp.isAfter(todayStart)) continue;
               final root = _rootDomain(access.domain);
+              if (root.isEmpty) continue;
               final stat = domainStats.putIfAbsent(root, () => _DomainStat());
               stat.totalSeconds += (access.durationSeconds as int);
               stat.visitCount += 1;
             }
 
-            // Sort by duration descending, take top 10
+            // Inject real-time duration for the currently active session
+            // (not yet committed to DB) so the display is always up-to-date.
+            try {
+              final vpn = Get.find<VpnController>();
+              final activeDomain = vpn.activeSessionDomain;
+              final activeSec = vpn.activeSessionSeconds;
+              if (activeDomain != null && activeSec > 0) {
+                final root = _rootDomain(activeDomain);
+                if (root.isNotEmpty) {
+                  final stat = domainStats[root];
+                  if (stat != null) {
+                    stat.totalSeconds += activeSec;
+                    // Count the still-open session as 1 visit
+                    stat.visitCount += 1;
+                  }
+                }
+              }
+            } catch (_) {
+              // VpnController not available — skip live injection
+            }
+
             final sorted = domainStats.entries.toList()
               ..sort(
-                (a, b) => b.value.totalSeconds.compareTo(a.value.totalSeconds),
+                (a, b) => b.value.visitCount.compareTo(a.value.visitCount),
               );
             final top = sorted.take(10).toList();
-            final maxSeconds = top.isNotEmpty
-                ? top.first.value.totalSeconds
-                : 1;
+            final domainCategory = <String, String>{};
+            for (final access in allAccesses) {
+              if (!access.timestamp.isAfter(todayStart)) continue;
+              final root = _rootDomain(access.domain);
+              if (root.isNotEmpty) {
+                domainCategory[root] = access.category ?? 'safe';
+              }
+            }
+
+            const podiumColors = [
+              Color(0xFFF59E0B),
+              Color(0xFF94A3B8),
+              Color(0xFFCD7F32),
+            ];
 
             if (top.isEmpty) return const SizedBox();
 
-            // Accent colors for top 3
-            const topColors = [
-              Color(0xFFF59E0B), // gold
-              Color(0xFF94A3B8), // silver
-              Color(0xFFCD7F32), // bronze
-            ];
-
-            return sectionContainer(
+            return card(
+              noPad: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  sectionTitle('history_top_domains'.tr),
-                  ...top.asMap().entries.map((entry) {
-                    final idx = entry.key;
-                    final domain = entry.value.key;
-                    final stat = entry.value.value;
-                    final fraction = maxSeconds > 0
-                        ? stat.totalSeconds / maxSeconds
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+                    child: Row(
+                      children: [
+                        Expanded(child: sectionLabel('history_top_domains'.tr)),
+                        Text(
+                          'history_today'.tr,
+                          style: theme.typography.xs.copyWith(
+                            color: theme.colors.mutedForeground,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ...top.asMap().entries.map((e) {
+                    final idx = e.key;
+                    final domain = e.value.key;
+                    final stat = e.value.value;
+                    final maxVisit = top.first.value.visitCount;
+                    final fraction = maxVisit > 0
+                        ? stat.visitCount / maxVisit
                         : 0.0;
-                    final isTop3 = idx < 3;
-                    final badgeColor = isTop3
-                        ? topColors[idx]
+                    final isTop = idx < 3;
+                    final badgeColor = isTop
+                        ? podiumColors[idx]
                         : theme.colors.mutedForeground;
+                    final cat = domainCategory[domain] ?? 'safe';
+                    final catColor = _categoryColor(cat, theme);
 
                     return Padding(
-                      padding: EdgeInsets.only(
-                        bottom: idx < top.length - 1 ? 10 : 0,
+                      padding: EdgeInsets.fromLTRB(
+                        14,
+                        0,
+                        14,
+                        idx < top.length - 1 ? 10 : 14,
                       ),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           // Rank badge
                           Container(
-                            width: 26,
-                            height: 26,
+                            width: 28,
+                            height: 28,
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: badgeColor.withValues(
-                                alpha: isTop3 ? 0.12 : 0.08,
-                              ),
+                              color: isTop
+                                  ? badgeColor.withValues(alpha: 0.15)
+                                  : theme.colors.muted.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               '${idx + 1}',
                               style: theme.typography.xs.copyWith(
                                 fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w800,
                                 color: badgeColor,
                               ),
                             ),
                           ),
                           const SizedBox(width: 10),
-                          // Domain + progress bar
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
+                                    // Category dot
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      margin: const EdgeInsets.only(right: 5),
+                                      decoration: BoxDecoration(
+                                        color: catColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
                                     Expanded(
                                       child: Text(
                                         domain,
                                         style: theme.typography.sm.copyWith(
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: FontWeight.w600,
                                           color: theme.colors.foreground,
                                         ),
                                         maxLines: 1,
@@ -554,59 +724,38 @@ class _HistoryScreenState extends State<HistoryScreen>
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      _formatDuration(stat.totalSeconds),
+                                      '${stat.visitCount}x',
                                       style: theme.typography.xs.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        color: isTop3
+                                        color: isTop
                                             ? badgeColor
-                                            : theme.colors.primary,
+                                            : theme.colors.mutedForeground,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
+                                    if (stat.totalSeconds > 0) ...[
+                                      Text(
+                                        ' · ${_formatDuration(stat.totalSeconds)}',
+                                        style: theme.typography.xs.copyWith(
+                                          color: theme.colors.mutedForeground,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
-                                const SizedBox(height: 5),
-                                // Progress bar
-                                Container(
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                    color: theme.colors.muted.withValues(
-                                      alpha: 0.3,
+                                const SizedBox(height: 4),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(3),
+                                  child: LinearProgressIndicator(
+                                    value: fraction.clamp(0.0, 1.0),
+                                    minHeight: 4,
+                                    backgroundColor: theme.colors.muted
+                                        .withValues(alpha: 0.2),
+                                    valueColor: AlwaysStoppedAnimation(
+                                      isTop
+                                          ? badgeColor.withValues(alpha: 0.7)
+                                          : catColor.withValues(alpha: 0.5),
                                     ),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                  child: FractionallySizedBox(
-                                    alignment: Alignment.centerLeft,
-                                    widthFactor: fraction.clamp(0.0, 1.0),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: isTop3
-                                              ? [
-                                                  badgeColor.withValues(
-                                                    alpha: 0.7,
-                                                  ),
-                                                  badgeColor,
-                                                ]
-                                              : [
-                                                  theme.colors.primary
-                                                      .withValues(alpha: 0.6),
-                                                  theme.colors.primary,
-                                                ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(2),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  'history_visits'.trParams({
-                                    'count': '${stat.visitCount}',
-                                  }),
-                                  style: theme.typography.xs.copyWith(
-                                    fontSize: 10,
-                                    color: theme.colors.mutedForeground
-                                        .withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
@@ -618,238 +767,6 @@ class _HistoryScreenState extends State<HistoryScreen>
                   }),
                 ],
               ),
-            );
-          },
-        ),
-
-        const SizedBox(height: AppSpacing.md),
-
-        // ─── Timeline Accordion ───
-        Text(
-          'history_timeline'.tr,
-          style: theme.typography.lg.copyWith(
-            fontWeight: FontWeight.bold,
-            color: theme.colors.foreground,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-
-        Builder(
-          builder: (context) {
-            final now = DateTime.now();
-            final today = DateTime(now.year, now.month, now.day);
-            final weekAgo = today.subtract(const Duration(days: 7));
-            final monthAgo = today.subtract(const Duration(days: 30));
-
-            // Aggregate by root domain per time period
-            Map<String, int> aggregateDomains(List<dynamic> items) {
-              final map = <String, int>{};
-              for (final a in items) {
-                final root = _rootDomain(a.domain);
-                map.update(root, (v) => v + 1, ifAbsent: () => 1);
-              }
-              return map;
-            }
-
-            final todayRaw = allAccesses
-                .where((a) => a.timestamp.isAfter(today))
-                .toList();
-            final weekRaw = allAccesses
-                .where(
-                  (a) =>
-                      a.timestamp.isAfter(weekAgo) &&
-                      a.timestamp.isBefore(today),
-                )
-                .toList();
-            final monthRaw = allAccesses
-                .where(
-                  (a) =>
-                      a.timestamp.isAfter(monthAgo) &&
-                      a.timestamp.isBefore(weekAgo),
-                )
-                .toList();
-
-            final todayDomains = aggregateDomains(todayRaw);
-            final weekDomains = aggregateDomains(weekRaw);
-            final monthDomains = aggregateDomains(monthRaw);
-
-            Widget buildDomainRow(String domain, int visits) {
-              return Container(
-                margin: const EdgeInsets.only(bottom: 4),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 11,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.colors.muted.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        domain,
-                        style: theme.typography.sm.copyWith(
-                          fontWeight: FontWeight.w500,
-                          color: theme.colors.foreground,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'history_visits'.trParams({'count': '$visits'}),
-                      style: theme.typography.xs.copyWith(
-                        color: theme.colors.mutedForeground,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            Widget buildAccordion({
-              required String title,
-              required int totalAccesses,
-              required bool expanded,
-              required ValueChanged<bool> onToggle,
-              required Map<String, int> domainCounts,
-              required String sectionKey,
-            }) {
-              final sorted = domainCounts.entries.toList()
-                ..sort((a, b) => b.value.compareTo(a.value));
-              final showAll = _tlShowAll[sectionKey] ?? false;
-              const previewLimit = 10;
-              final displayList = showAll
-                  ? sorted
-                  : sorted.take(previewLimit).toList();
-              final hasMore = sorted.length > previewLimit;
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  GestureDetector(
-                    onTap: () => onToggle(!expanded),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 4,
-                            height: 22,
-                            decoration: BoxDecoration(
-                              color: theme.colors.primary,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              '$title ($totalAccesses)',
-                              style: theme.typography.sm.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: theme.colors.foreground,
-                              ),
-                            ),
-                          ),
-                          AnimatedRotation(
-                            turns: expanded ? 0.5 : 0,
-                            duration: const Duration(milliseconds: 200),
-                            child: Icon(
-                              Icons.keyboard_arrow_up_rounded,
-                              size: 22,
-                              color: theme.colors.mutedForeground,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  AnimatedCrossFade(
-                    firstChild: const SizedBox(width: double.infinity),
-                    secondChild: Column(
-                      children: [
-                        ...displayList.map(
-                          (e) => buildDomainRow(e.key, e.value),
-                        ),
-                        if (hasMore)
-                          GestureDetector(
-                            onTap: () => setState(() {
-                              _tlShowAll[sectionKey] = !showAll;
-                            }),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    showAll
-                                        ? Icons.keyboard_arrow_up_rounded
-                                        : Icons.keyboard_arrow_down_rounded,
-                                    size: 18,
-                                    color: theme.colors.primary,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    showAll
-                                        ? 'Show less'
-                                        : 'Show all (${sorted.length})',
-                                    style: theme.typography.xs.copyWith(
-                                      color: theme.colors.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    crossFadeState: expanded
-                        ? CrossFadeState.showSecond
-                        : CrossFadeState.showFirst,
-                    duration: const Duration(milliseconds: 250),
-                    sizeCurve: Curves.easeInOut,
-                  ),
-                ],
-              );
-            }
-
-            return Column(
-              children: [
-                if (todayDomains.isNotEmpty) ...[
-                  buildAccordion(
-                    title: 'history_today'.tr,
-                    totalAccesses: todayRaw.length,
-                    expanded: _todayExpanded,
-                    onToggle: (v) => setState(() => _todayExpanded = v),
-                    domainCounts: todayDomains,
-                    sectionKey: 'today',
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
-                if (weekDomains.isNotEmpty) ...[
-                  buildAccordion(
-                    title: 'history_this_week'.tr,
-                    totalAccesses: weekRaw.length,
-                    expanded: _weekExpanded,
-                    onToggle: (v) => setState(() => _weekExpanded = v),
-                    domainCounts: weekDomains,
-                    sectionKey: 'week',
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
-                if (monthDomains.isNotEmpty)
-                  buildAccordion(
-                    title: 'history_this_month'.tr,
-                    totalAccesses: monthRaw.length,
-                    expanded: _monthExpanded,
-                    onToggle: (v) => setState(() => _monthExpanded = v),
-                    domainCounts: monthDomains,
-                    sectionKey: 'month',
-                  ),
-              ],
             );
           },
         ),
@@ -920,13 +837,16 @@ class _HistoryScreenState extends State<HistoryScreen>
 
     final dayAccesses = eventMap[selectedNorm] ?? [];
 
-    // Group by category, then aggregate by root domain
-    final byCategory = <String, Map<String, int>>{};
+    // Group by category, then aggregate by root domain (visit count + duration)
+    final byCategory = <String, Map<String, _DomainStat>>{};
     for (final a in dayAccesses) {
       final cat = a.category as String;
       final root = _rootDomain(a.domain);
-      byCategory.putIfAbsent(cat, () => <String, int>{});
-      byCategory[cat]!.update(root, (v) => v + 1, ifAbsent: () => 1);
+      if (root.isEmpty) continue;
+      byCategory.putIfAbsent(cat, () => <String, _DomainStat>{});
+      final stat = byCategory[cat]!.putIfAbsent(root, () => _DomainStat());
+      stat.visitCount += 1;
+      stat.totalSeconds += (a.durationSeconds as int? ?? 0);
     }
     // Sort categories alphabetically
     final sortedCategories = byCategory.keys.toList()..sort();
@@ -1096,10 +1016,12 @@ class _HistoryScreenState extends State<HistoryScreen>
             final domainMap = byCategory[category]!;
             // Sort by visit count descending
             final sortedDomains = domainMap.entries.toList()
-              ..sort((a, b) => b.value.compareTo(a.value));
+              ..sort(
+                (a, b) => b.value.visitCount.compareTo(a.value.visitCount),
+              );
             final totalInCat = sortedDomains.fold<int>(
               0,
-              (sum, e) => sum + e.value,
+              (sum, e) => sum + e.value.visitCount,
             );
             final isExpanded = _calCategoryExpanded[category] ?? false;
             final showAll = _calShowAll[category] ?? false;
@@ -1179,28 +1101,44 @@ class _HistoryScreenState extends State<HistoryScreen>
                                 width: 0.5,
                               ),
                             ),
-                            child: Row(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    entry.key,
-                                    style: theme.typography.sm.copyWith(
-                                      fontWeight: FontWeight.w500,
-                                      color: theme.colors.foreground,
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        entry.key,
+                                        style: theme.typography.sm.copyWith(
+                                          fontWeight: FontWeight.w500,
+                                          color: theme.colors.foreground,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'history_visits'.trParams({
+                                        'count': '${entry.value.visitCount}',
+                                      }),
+                                      style: theme.typography.xs.copyWith(
+                                        color: theme.colors.mutedForeground,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'history_visits'.trParams({
-                                    'count': '${entry.value}',
-                                  }),
-                                  style: theme.typography.xs.copyWith(
-                                    color: theme.colors.mutedForeground,
+                                if (entry.value.totalSeconds > 0) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _formatDuration(entry.value.totalSeconds),
+                                    style: theme.typography.xs.copyWith(
+                                      color: theme.colors.mutedForeground
+                                          .withValues(alpha: 0.6),
+                                      fontSize: 10,
+                                    ),
                                   ),
-                                ),
+                                ],
                               ],
                             ),
                           );
@@ -1287,28 +1225,6 @@ class _HistoryScreenState extends State<HistoryScreen>
     }
   }
 
-  String _getChartTitle(ChartPeriod period) {
-    switch (period) {
-      case ChartPeriod.daily:
-        return 'history_daily_title'.tr;
-      case ChartPeriod.weekly:
-        return 'history_weekly_title'.tr;
-      case ChartPeriod.monthly:
-        return 'history_monthly_title'.tr;
-    }
-  }
-
-  double _getBarWidth(ChartPeriod period, int count) {
-    switch (period) {
-      case ChartPeriod.daily:
-        return 16;
-      case ChartPeriod.weekly:
-        return 24;
-      case ChartPeriod.monthly:
-        return 6;
-    }
-  }
-
   double _getGridInterval(List<_ChartPoint> data) {
     if (data.isEmpty) return 5;
     final maxVal = data.map((e) => e.value).reduce((a, b) => a > b ? a : b);
@@ -1317,19 +1233,64 @@ class _HistoryScreenState extends State<HistoryScreen>
     return 20;
   }
 
-  // ─── Chart data builders ───
-
-  List<_ChartPoint> _buildChartData(
+  /// Build chart data split by category.
+  Map<String, List<_ChartPoint>> _buildChartDataByCategory(
     List<dynamic> accesses,
     ChartPeriod period,
   ) {
-    switch (period) {
-      case ChartPeriod.daily:
-        return _buildDailyData(accesses);
-      case ChartPeriod.weekly:
-        return _buildWeeklyData(accesses);
-      case ChartPeriod.monthly:
-        return _buildMonthlyData(accesses);
+    final categories =
+        accesses.map((a) => (a.category as String? ?? 'safe')).toSet().toList()
+          ..sort();
+
+    if (categories.isEmpty) return {};
+
+    final result = <String, List<_ChartPoint>>{};
+    for (final cat in categories) {
+      final filtered = accesses
+          .where((a) => (a.category as String? ?? 'safe') == cat)
+          .toList();
+      switch (period) {
+        case ChartPeriod.daily:
+          result[cat] = _buildDailyData(filtered);
+        case ChartPeriod.weekly:
+          result[cat] = _buildWeeklyData(filtered);
+        case ChartPeriod.monthly:
+          result[cat] = _buildMonthlyData(filtered);
+      }
+    }
+    return result;
+  }
+
+  Color _categoryColor2(String category) {
+    switch (category.toLowerCase()) {
+      case 'safe':
+        return const Color(0xFF10B981);
+      case 'adult':
+        return const Color(0xFFEC4899);
+      case 'gambling':
+        return const Color(0xFFF59E0B);
+      case 'phishing':
+        return const Color(0xFFEF4444);
+      case 'malware':
+        return const Color(0xFF8B5CF6);
+      case 'mixed':
+        return const Color(0xFF06B6D4);
+      case 'cryptojacking':
+        return const Color(0xFFF97316);
+      case 'drugs':
+        return const Color(0xFF84CC16);
+      case 'hacking':
+        return const Color(0xFF6366F1);
+      case 'dangerous':
+        return const Color(0xFFDC2626);
+      case 'dating':
+        return const Color(0xFFDB2777);
+      case 'ddos':
+        return const Color(0xFF7C3AED);
+      case 'warez':
+        return const Color(0xFF64748B);
+      default:
+        return const Color(0xFF6C63FF);
     }
   }
 
@@ -1342,13 +1303,12 @@ class _HistoryScreenState extends State<HistoryScreen>
       final hourStart = todayStart.add(Duration(hours: h));
       final hourEnd = hourStart.add(const Duration(hours: 1));
 
+      // Count total visit records in this hour (not unique domains)
       final count = accesses
           .where(
             (a) =>
                 a.timestamp.isAfter(hourStart) && a.timestamp.isBefore(hourEnd),
           )
-          .map((a) => a.domain)
-          .toSet()
           .length;
 
       final label = h % 3 == 0 ? h.toString().padLeft(2, '0') : '';
@@ -1372,13 +1332,12 @@ class _HistoryScreenState extends State<HistoryScreen>
       final dayStart = DateTime(date.year, date.month, date.day);
       final dayEnd = dayStart.add(const Duration(days: 1));
 
+      // Count total visit records per day (not unique domains)
       final count = accesses
           .where(
             (a) =>
                 a.timestamp.isAfter(dayStart) && a.timestamp.isBefore(dayEnd),
           )
-          .map((a) => a.domain)
-          .toSet()
           .length;
 
       final dayLabel = days[date.weekday - 1];
@@ -1399,13 +1358,12 @@ class _HistoryScreenState extends State<HistoryScreen>
       final dayStart = DateTime(date.year, date.month, date.day);
       final dayEnd = dayStart.add(const Duration(days: 1));
 
+      // Count total visit records per day (not unique domains)
       final count = accesses
           .where(
             (a) =>
                 a.timestamp.isAfter(dayStart) && a.timestamp.isBefore(dayEnd),
           )
-          .map((a) => a.domain)
-          .toSet()
           .length;
 
       final label = i % 5 == 0 ? '${date.day}/${date.month}' : '';
@@ -1417,46 +1375,7 @@ class _HistoryScreenState extends State<HistoryScreen>
     return result;
   }
 
-  // ─── Summary row ───
-
-  Widget _buildSummaryRow(List<_ChartPoint> data, FThemeData theme) {
-    final total = data.fold<double>(0, (sum, p) => sum + p.value);
-    final avg = data.isNotEmpty ? (total / data.length) : 0.0;
-    final max = data.isNotEmpty
-        ? data.map((e) => e.value).reduce((a, b) => a > b ? a : b)
-        : 0.0;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _SummaryItem(
-          label: 'history_total'.tr,
-          value: total.round().toString(),
-          theme: theme,
-        ),
-        _SummaryItem(
-          label: 'history_average'.tr,
-          value: avg.toStringAsFixed(1),
-          theme: theme,
-        ),
-        _SummaryItem(
-          label: 'history_highest'.tr,
-          value: max.round().toString(),
-          theme: theme,
-        ),
-      ],
-    );
-  }
-
   // ─── Shared helpers ───
-
-  Map<String, int> _buildCategoryData(List<dynamic> accesses) {
-    final cats = <String, int>{};
-    for (final access in accesses) {
-      cats[access.category] = (cats[access.category] ?? 0) + 1;
-    }
-    return cats;
-  }
 
   Color _categoryColor(String category, FThemeData theme) {
     switch (category) {
@@ -1467,33 +1386,6 @@ class _HistoryScreenState extends State<HistoryScreen>
       default:
         return theme.colors.mutedForeground;
     }
-  }
-
-  String _formatDate(DateTime dt) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final date = DateTime(dt.year, dt.month, dt.day);
-
-    if (date == today) return 'history_today'.tr;
-    if (date == today.subtract(const Duration(days: 1))) {
-      return 'history_yesterday'.tr;
-    }
-
-    final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
   }
 
   String _formatDuration(int totalSeconds) {
@@ -1521,36 +1413,54 @@ class _ChartPoint {
   });
 }
 
-class _SummaryItem extends StatelessWidget {
+class _StatChip extends StatelessWidget {
   final String label;
   final String value;
+  final Color accent;
   final FThemeData theme;
+  final IconData? icon;
 
-  const _SummaryItem({
+  const _StatChip({
     required this.label,
     required this.value,
+    required this.accent,
     required this.theme,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: theme.typography.lg.copyWith(
-            fontWeight: FontWeight.bold,
-            color: theme.colors.primary,
+    return Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              size: 14,
+              color: theme.colors.mutedForeground.withValues(alpha: 0.6),
+            ),
+            const SizedBox(height: 4),
+          ],
+          Text(
+            value,
+            style: theme.typography.base.copyWith(
+              fontWeight: FontWeight.w800,
+              color: accent,
+            ),
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: theme.typography.xs.copyWith(
-            color: theme.colors.mutedForeground,
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: theme.typography.xs.copyWith(
+              color: theme.colors.mutedForeground,
+              fontSize: 10,
+            ),
+            textAlign: TextAlign.center,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

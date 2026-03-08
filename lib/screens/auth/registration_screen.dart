@@ -100,11 +100,14 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       // Go to onboarding
       Get.offAllNamed(AppRoutes.onboarding);
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         showFToast(
           context: context,
           style: const FToastStyleDelta.delta(
-            constraints: BoxConstraints(minWidth: double.infinity, maxWidth: double.infinity),
+            constraints: BoxConstraints(
+              minWidth: double.infinity,
+              maxWidth: double.infinity,
+            ),
           ),
           alignment: FToastAlignment.topCenter,
           icon: const Icon(Icons.error_outline, color: Colors.red),
@@ -677,7 +680,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                 Switch(
                   value: _monitoringConsent,
                   onChanged: (v) => setState(() => _monitoringConsent = v),
-                  activeColor: theme.colors.primary,
+                  activeThumbColor: theme.colors.primary,
                 ),
               ],
             ),

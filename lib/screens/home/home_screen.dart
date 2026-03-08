@@ -222,138 +222,140 @@ class _MonitoringCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vpnActive = ctrl.isRunning.value;
-    final a11yActive = ctrl.isAccessibilityEnabled.value;
-    final notifActive = ctrl.isNotificationEnabled.value;
-    final allActive = vpnActive && a11yActive && notifActive;
-    final someActive = vpnActive || a11yActive;
+    return Obx(() {
+      final vpnActive = ctrl.isRunning.value;
+      final a11yActive = ctrl.isAccessibilityEnabled.value;
+      final notifActive = ctrl.isNotificationEnabled.value;
+      final allActive = vpnActive && a11yActive && notifActive;
+      final someActive = vpnActive || a11yActive;
 
-    final statusColor = allActive
-        ? const Color(0xFF22C55E)
-        : someActive
-        ? Colors.orange
-        : theme.colors.mutedForeground;
+      final statusColor = allActive
+          ? const Color(0xFF22C55E)
+          : someActive
+          ? Colors.orange
+          : theme.colors.mutedForeground;
 
-    final statusText = allActive
-        ? 'home_monitoring_all_active'.tr
-        : someActive
-        ? 'home_monitoring_partial'.tr
-        : 'home_monitoring_inactive'.tr;
+      final statusText = allActive
+          ? 'home_monitoring_all_active'.tr
+          : someActive
+          ? 'home_monitoring_partial'.tr
+          : 'home_monitoring_inactive'.tr;
 
-    return GestureDetector(
-      onTap: () => _showMonitoringSheet(context),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: allActive
-              ? LinearGradient(
-                  colors: [
-                    const Color(0xFF22C55E).withValues(alpha: 0.12),
-                    const Color(0xFF22C55E).withValues(alpha: 0.04),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : someActive
-              ? LinearGradient(
-                  colors: [
-                    Colors.orange.withValues(alpha: 0.08),
-                    Colors.orange.withValues(alpha: 0.02),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          border: Border.all(
-            color: allActive
-                ? const Color(0xFF22C55E).withValues(alpha: 0.35)
-                : someActive
-                ? Colors.orange.withValues(alpha: 0.3)
-                : theme.colors.border,
-          ),
-          color: (allActive || someActive) ? null : theme.colors.background,
-        ),
-        child: Row(
-          children: [
-            // Shield icon
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: statusColor.withValues(alpha: 0.15),
-              ),
-              child: Icon(
-                allActive
-                    ? Icons.shield
-                    : someActive
-                    ? Icons.shield
-                    : Icons.shield_outlined,
-                size: 24,
-                color: statusColor,
-              ),
-            ),
-            const SizedBox(width: 14),
-            // Text
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    statusText,
-                    style: theme.typography.sm.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colors.foreground,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      _statusDot(vpnActive),
-                      const SizedBox(width: 4),
-                      Text(
-                        'VPN',
-                        style: theme.typography.xs.copyWith(
-                          color: theme.colors.mutedForeground,
-                          fontSize: 10,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      _statusDot(a11yActive),
-                      const SizedBox(width: 4),
-                      Text(
-                        'URL Capture',
-                        style: theme.typography.xs.copyWith(
-                          color: theme.colors.mutedForeground,
-                          fontSize: 10,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      _statusDot(notifActive),
-                      const SizedBox(width: 4),
-                      Text(
-                        'home_notification'.tr,
-                        style: theme.typography.xs.copyWith(
-                          color: theme.colors.mutedForeground,
-                          fontSize: 10,
-                        ),
-                      ),
+      return GestureDetector(
+        onTap: () => _showMonitoringSheet(context),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: allActive
+                ? LinearGradient(
+                    colors: [
+                      const Color(0xFF22C55E).withValues(alpha: 0.12),
+                      const Color(0xFF22C55E).withValues(alpha: 0.04),
                     ],
-                  ),
-                ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : someActive
+                ? LinearGradient(
+                    colors: [
+                      Colors.orange.withValues(alpha: 0.08),
+                      Colors.orange.withValues(alpha: 0.02),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            border: Border.all(
+              color: allActive
+                  ? const Color(0xFF22C55E).withValues(alpha: 0.35)
+                  : someActive
+                  ? Colors.orange.withValues(alpha: 0.3)
+                  : theme.colors.border,
+            ),
+            color: (allActive || someActive) ? null : theme.colors.background,
+          ),
+          child: Row(
+            children: [
+              // Shield icon
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: statusColor.withValues(alpha: 0.15),
+                ),
+                child: Icon(
+                  allActive
+                      ? Icons.shield
+                      : someActive
+                      ? Icons.shield
+                      : Icons.shield_outlined,
+                  size: 24,
+                  color: statusColor,
+                ),
               ),
-            ),
-            // Chevron
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 22,
-              color: theme.colors.mutedForeground.withValues(alpha: 0.5),
-            ),
-          ],
+              const SizedBox(width: 14),
+              // Text
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      statusText,
+                      style: theme.typography.sm.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: theme.colors.foreground,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        _statusDot(vpnActive),
+                        const SizedBox(width: 4),
+                        Text(
+                          'VPN',
+                          style: theme.typography.xs.copyWith(
+                            color: theme.colors.mutedForeground,
+                            fontSize: 10,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        _statusDot(a11yActive),
+                        const SizedBox(width: 4),
+                        Text(
+                          'URL Capture',
+                          style: theme.typography.xs.copyWith(
+                            color: theme.colors.mutedForeground,
+                            fontSize: 10,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        _statusDot(notifActive),
+                        const SizedBox(width: 4),
+                        Text(
+                          'home_notification'.tr,
+                          style: theme.typography.xs.copyWith(
+                            color: theme.colors.mutedForeground,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Chevron
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 22,
+                color: theme.colors.mutedForeground.withValues(alpha: 0.5),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _statusDot(bool active) {
@@ -368,6 +370,10 @@ class _MonitoringCard extends StatelessWidget {
   }
 
   void _showMonitoringSheet(BuildContext context) {
+    // Refresh accessibility + notification status before opening so the sheet
+    // always reflects the current state (user may have just toggled them in
+    // Android Settings without returning to the app via a lifecycle event).
+    ctrl.refreshMonitoringStatus();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -452,7 +458,8 @@ class _MonitoringSheet extends StatelessWidget {
                           context: context,
                           style: const FToastStyleDelta.delta(
                             constraints: BoxConstraints(
-                              minWidth: double.infinity, maxWidth: double.infinity,
+                              minWidth: double.infinity,
+                              maxWidth: double.infinity,
                             ),
                           ),
                           alignment: FToastAlignment.topCenter,
@@ -469,7 +476,8 @@ class _MonitoringSheet extends StatelessWidget {
                           context: context,
                           style: const FToastStyleDelta.delta(
                             constraints: BoxConstraints(
-                              minWidth: double.infinity, maxWidth: double.infinity,
+                              minWidth: double.infinity,
+                              maxWidth: double.infinity,
                             ),
                           ),
                           alignment: FToastAlignment.topCenter,
@@ -534,7 +542,8 @@ class _MonitoringSheet extends StatelessWidget {
                                 context: context,
                                 style: const FToastStyleDelta.delta(
                                   constraints: BoxConstraints(
-                                    minWidth: double.infinity, maxWidth: double.infinity,
+                                    minWidth: double.infinity,
+                                    maxWidth: double.infinity,
                                   ),
                                 ),
                                 alignment: FToastAlignment.topCenter,
@@ -560,7 +569,8 @@ class _MonitoringSheet extends StatelessWidget {
                         context: context,
                         style: const FToastStyleDelta.delta(
                           constraints: BoxConstraints(
-                            minWidth: double.infinity, maxWidth: double.infinity,
+                            minWidth: double.infinity,
+                            maxWidth: double.infinity,
                           ),
                         ),
                         alignment: FToastAlignment.topCenter,

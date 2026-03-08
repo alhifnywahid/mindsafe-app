@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:mindsafe_flutter/data/services/local_database.dart';
@@ -127,7 +128,7 @@ class SyncService extends GetxService {
       _updatePendingCount();
       return imported;
     } catch (e) {
-      print('Pull error: $e');
+      debugPrint('Pull error: $e');
       return 0;
     } finally {
       isSyncing.value = false;

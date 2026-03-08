@@ -345,7 +345,8 @@ class SettingsScreen extends StatelessWidget {
                                   context: context,
                                   style: const FToastStyleDelta.delta(
                                     constraints: BoxConstraints(
-                                      minWidth: double.infinity, maxWidth: double.infinity,
+                                      minWidth: double.infinity,
+                                      maxWidth: double.infinity,
                                     ),
                                   ),
                                   alignment: FToastAlignment.topCenter,
@@ -468,7 +469,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.md),
 
             // Sign Out
             SizedBox(
@@ -481,7 +482,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.md),
 
             // App info
             Center(
@@ -635,7 +636,8 @@ class SettingsScreen extends StatelessWidget {
                                         context: context,
                                         style: const FToastStyleDelta.delta(
                                           constraints: BoxConstraints(
-                                            minWidth: double.infinity, maxWidth: double.infinity,
+                                            minWidth: double.infinity,
+                                            maxWidth: double.infinity,
                                           ),
                                         ),
                                         alignment: FToastAlignment.topCenter,
@@ -656,7 +658,8 @@ class SettingsScreen extends StatelessWidget {
                                         context: context,
                                         style: const FToastStyleDelta.delta(
                                           constraints: BoxConstraints(
-                                            minWidth: double.infinity, maxWidth: double.infinity,
+                                            minWidth: double.infinity,
+                                            maxWidth: double.infinity,
                                           ),
                                         ),
                                         alignment: FToastAlignment.topCenter,

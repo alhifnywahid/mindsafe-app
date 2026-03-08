@@ -7,6 +7,8 @@ import 'package:mindsafe_flutter/data/services/auth_service.dart';
 import 'package:mindsafe_flutter/data/services/domain_classifier.dart';
 import 'package:mindsafe_flutter/data/models/domain_access.dart';
 import 'package:mindsafe_flutter/data/services/notification_service.dart';
+import 'package:mindsafe_flutter/data/services/sync_service.dart';
+import 'package:mindsafe_flutter/app/services/background_tracking_service.dart';
 
 class VpnController extends GetxController with WidgetsBindingObserver {
   final VpnService _vpnService = Get.find<VpnService>();
@@ -19,6 +21,11 @@ class VpnController extends GetxController with WidgetsBindingObserver {
   final todayDomainCount = 0.obs;
   final todayDurationMinutes = 0.obs;
   final todayUrlCount = 0.obs;
+
+  /// Increments every time a domain access record is written to DB.
+  /// Use this in History Screen Obx so it rebuilds on every new record,
+  /// not only when unique domain count changes.
+  final accessCount = 0.obs;
 
   // Monitoring scope
   final trackAllApps = false.obs;
@@ -40,6 +47,25 @@ class VpnController extends GetxController with WidgetsBindingObserver {
 
   final _domainLastSeen = <String, DateTime>{};
 
+  // Accessibility-first deduplication
+  final _a11yRecentDomains = <String, DateTime>{};
+  static const _a11yDedupeWindowMs = 5000;
+
+  // Session-based duration tracking (Accessibility path)
+  // Tracks the domain currently open in the browser and when the session started.
+  String? _activeA11yDomain;
+  DateTime? _activeSessionStart;
+
+  /// The domain currently being browsed (active a11y session). Null if no session.
+  String? get activeSessionDomain => _activeA11yDomain;
+
+  /// How many seconds the current active session has been open.
+  int get activeSessionSeconds {
+    final start = _activeSessionStart;
+    if (_activeA11yDomain == null || start == null) return 0;
+    return DateTime.now().difference(start).inSeconds;
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -52,10 +78,14 @@ class VpnController extends GetxController with WidgetsBindingObserver {
     _calculateTodayStats();
     _calculateWeeklyStats();
     _checkAccessibility();
+    _syncUserIdToBackground();
+    // Consume any URLs tracked while app was closed
+    _consumePendingUrls();
   }
 
   @override
   void onClose() {
+    _closeActiveSession();
     WidgetsBinding.instance.removeObserver(this);
     super.onClose();
   }
@@ -63,9 +93,13 @@ class VpnController extends GetxController with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Re-check accessibility when user returns to the app
-      // (e.g. after enabling it in device settings)
       _checkAccessibility();
+      _closeActiveSession();
+      // App came back to foreground → consume URLs tracked in background
+      _consumePendingUrls();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _closeActiveSession();
     }
   }
 
@@ -73,6 +107,82 @@ class VpnController extends GetxController with WidgetsBindingObserver {
   Future<void> _loadTrackAllApps() async {
     final prefs = await SharedPreferences.getInstance();
     trackAllApps.value = prefs.getBool(_prefKeyTrackAll) ?? false;
+  }
+
+  /// Persist userId so BrowserMonitorService.kt can attribute pending records,
+  /// and refresh stats / pull Firestore whenever the user logs in.
+  void _syncUserIdToBackground() {
+    final userId = _authService.currentUser?.uid ?? '';
+    if (userId.isNotEmpty) setBackgroundUserId(userId);
+
+    _authService.authStateChanges.listen((user) async {
+      if (user != null) {
+        await setBackgroundUserId(user.uid);
+        _calculateTodayStats();
+        _calculateWeeklyStats();
+        await _consumePendingUrls();
+        // Re-trigger Firestore pull now that VpnController is registered
+        Future.delayed(const Duration(milliseconds: 300), () {
+          try {
+            Get.find<SyncService>().pullFromFirebase();
+          } catch (_) {}
+        });
+      }
+    });
+  }
+
+  /// Read pending URL events written by BrowserMonitorService.kt to
+  /// SharedPreferences while the app was closed, convert them to DomainAccess
+  /// records in Hive, then refresh the UI.
+  Future<void> _consumePendingUrls() async {
+    try {
+      final pending = await consumePendingUrls();
+      if (pending.isEmpty) return;
+
+      final userId = _authService.currentUser?.uid ?? '';
+      if (userId.isEmpty) return;
+
+      // Group by URL to build session-like records
+      String? prevDomain;
+      DateTime? prevTime;
+
+      for (final e in pending) {
+        final url = e['url'] as String? ?? '';
+        final tsMs = e['timestamp'] as int? ?? 0;
+        final ts = DateTime.fromMillisecondsSinceEpoch(tsMs);
+
+        String domain;
+        try {
+          domain = Uri.parse(url).host;
+        } catch (_) {
+          domain = url;
+        }
+        domain = _normalizeDomain(domain);
+        if (domain.isEmpty) continue;
+
+        final durSec = (prevDomain == domain && prevTime != null)
+            ? ts.difference(prevTime).inSeconds.clamp(0, 3600)
+            : 0;
+
+        final category = _classifier.classifyDomain(domain);
+        await _db.domainAccess.add(
+          DomainAccess(
+            domain: domain,
+            timestamp: ts,
+            durationSeconds: durSec,
+            category: category,
+            userId: userId,
+            synced: false,
+          ),
+        );
+
+        prevDomain = domain;
+        prevTime = ts;
+      }
+
+      _calculateTodayStats();
+      _calculateWeeklyStats();
+    } catch (_) {}
   }
 
   /// Load notification preference from SharedPreferences
@@ -127,6 +237,13 @@ class VpnController extends GetxController with WidgetsBindingObserver {
     isAccessibilityEnabled.value = await _vpnService.isAccessibilityEnabled();
   }
 
+  /// Refresh all monitoring status indicators (accessibility + notification).
+  /// Called when the monitoring sheet is opened to show real-time state.
+  void refreshMonitoringStatus() {
+    _checkAccessibility();
+    _loadNotificationPref();
+  }
+
   void _listenToVpnEvents() {
     _vpnService.vpnEventStream?.listen((event) {
       if (event is Map) {
@@ -141,9 +258,16 @@ class VpnController extends GetxController with WidgetsBindingObserver {
             break;
 
           case 'domain':
-            final domain = event['domain'] as String?;
-            if (domain != null && domain.isNotEmpty) {
-              _handleDomainEvent(domain);
+            // Accessibility-first: if Accessibility Service is active,
+            // it already captures exactly what the user visits in the browser
+            // URL bar. VPN captures ALL DNS requests including CDN, trackers,
+            // and background requests — which are noise, not user intent.
+            // → Only use VPN events as fallback when Accessibility is NOT active.
+            if (isAccessibilityEnabled.value) break;
+
+            final rawDomain = event['domain'] as String?;
+            if (rawDomain != null && rawDomain.isNotEmpty) {
+              _handleDomainEvent(rawDomain, source: 'vpn');
             }
             break;
 
@@ -173,6 +297,14 @@ class VpnController extends GetxController with WidgetsBindingObserver {
         }
       }
     });
+  }
+
+  /// Cleans up stale entries from _a11yRecentDomains to prevent memory bloat.
+  void _pruneA11yCache() {
+    final now = DateTime.now();
+    _a11yRecentDomains.removeWhere(
+      (_, t) => now.difference(t).inMilliseconds > _a11yDedupeWindowMs * 10,
+    );
   }
 
   /// Returns 'started', 'no_accessibility', or 'error'
@@ -205,7 +337,6 @@ class VpnController extends GetxController with WidgetsBindingObserver {
   }
 
   void _handleUrlEvent(String url, String browserPackage) {
-    // Extract domain from URL for classification
     String domain;
     try {
       final uri = Uri.parse(url);
@@ -217,15 +348,58 @@ class VpnController extends GetxController with WidgetsBindingObserver {
     domain = _normalizeDomain(domain);
     if (domain.isEmpty) return;
 
-    // Log with full URL info
     // ignore: avoid_print
     print('🌐 URL [$browserPackage]: $url (domain: $domain)');
 
-    _handleDomainEvent(domain, fullUrl: url);
+    // Update dedup map so VPN skips this domain
+    _a11yRecentDomains[domain] = DateTime.now();
+    _pruneA11yCache();
+
+    // ── Session-based duration tracking ──────────────────────────────
+    // If the user has navigated to a DIFFERENT domain, close the previous
+    // session and persist its real duration before starting a new one.
+    if (_activeA11yDomain != null && _activeA11yDomain != domain) {
+      _closeActiveSession();
+    }
+
+    if (_activeA11yDomain != domain) {
+      // New domain: open a fresh session and immediately record a
+      // zero-duration entry so the domain appears in today's stats right away.
+      _activeA11yDomain = domain;
+      _activeSessionStart = DateTime.now();
+      _handleDomainEvent(
+        domain,
+        fullUrl: url,
+        source: 'accessibility',
+        durationOverride: 0,
+      );
+    }
+    // Same domain as before: session is still open — nothing to do.
+  }
+
+  /// Closes the active Accessibility session and saves the accumulated duration.
+  void _closeActiveSession() {
+    final domain = _activeA11yDomain;
+    final start = _activeSessionStart;
+    if (domain == null || start == null) return;
+
+    final durationSeconds = DateTime.now().difference(start).inSeconds;
+    if (durationSeconds > 0) {
+      // ignore: avoid_print
+      print('⏱️ [accessibility] session closed: $domain = ${durationSeconds}s');
+      _handleDomainEvent(
+        domain,
+        source: 'accessibility',
+        durationOverride: durationSeconds,
+      );
+    }
+
+    _activeA11yDomain = null;
+    _activeSessionStart = null;
   }
 
   /// Validate & normalise a raw domain string.
-  /// Returns '' for junk (encoded spaces, no dots, IPs, etc.).
+  /// Returns '' for junk (encoded spaces, no dots, short TLD, IPs, bare ccSLDs, etc.).
   /// Strips subdomains down to the registrable root (keeps last 2 parts,
   /// or last 3 for two-letter TLDs like .co.id, .co.uk).
   static String _normalizeDomain(String raw) {
@@ -244,6 +418,41 @@ class VpnController extends GetxController with WidgetsBindingObserver {
 
     // Extract root domain (collapse subdomains)
     final parts = d.split('.');
+    final tld = parts.last;
+
+    // TLD must be at least 2 characters (reject "tiktok.c" while typing)
+    if (tld.length < 2) return '';
+
+    // Reject pure IP addresses (digits only in all parts)
+    if (parts.every((p) => int.tryParse(p) != null)) return '';
+
+    // Reject bare ccSLD pairs (my.id, go.id, co.id, co.uk, ac.id, web.id, etc.)
+    // These are "public suffix" pseudo-TLDs, not real registrable domains.
+    // A real domain using these always has a third part: gopret.my.id
+    const ccSldPrefixes = {
+      'co',
+      'go',
+      'ac',
+      'my',
+      'web',
+      'or',
+      'sch',
+      'mil',
+      'biz',
+      'net',
+      'com',
+      'org',
+      'gov',
+      'edu',
+      'int',
+      'id',
+      'uk',
+      'jp',
+      'au',
+      'br',
+    };
+    if (parts.length == 2 && ccSldPrefixes.contains(parts[0])) return '';
+
     if (parts.length <= 2) return d;
 
     // Handle two-letter second-level TLDs (co.id, co.uk, com.br, etc.)
@@ -254,7 +463,12 @@ class VpnController extends GetxController with WidgetsBindingObserver {
     return parts.sublist(parts.length - 2).join('.');
   }
 
-  void _handleDomainEvent(String domain, {String? fullUrl}) {
+  void _handleDomainEvent(
+    String domain, {
+    String? fullUrl,
+    String source = 'vpn',
+    int? durationOverride, // null = use event-based calc (VPN fallback)
+  }) {
     domain = _normalizeDomain(domain);
     if (domain.isEmpty) return;
 
@@ -262,20 +476,29 @@ class VpnController extends GetxController with WidgetsBindingObserver {
     final skipDomains = _db.skipDomains.values;
     for (final skipDomain in skipDomains) {
       if (domain == skipDomain || domain.endsWith('.$skipDomain')) {
-        return; // Skip - do not record this domain
+        return;
       }
     }
 
     final now = DateTime.now();
     final userId = _authService.currentUser?.uid ?? '';
 
-    // Calculate duration since last seen
-    final lastSeen = _domainLastSeen[domain];
-    final durationSeconds = lastSeen != null
-        ? now.difference(lastSeen).inSeconds
-        : 0;
+    // Duration logic:
+    // - Accessibility path → uses durationOverride (session-based, accurate)
+    // - VPN fallback path  → uses event-based delta (same as before)
+    late final int durationSeconds;
+    if (durationOverride != null) {
+      durationSeconds = durationOverride;
+    } else {
+      final lastSeen = _domainLastSeen[domain];
+      durationSeconds = lastSeen != null
+          ? now.difference(lastSeen).inSeconds
+          : 0;
+      _domainLastSeen[domain] = now;
+    }
 
-    _domainLastSeen[domain] = now;
+    // ignore: avoid_print
+    print('📌 [$source] recording domain: $domain');
 
     // Classify domain
     final category = _classifier.classifyDomain(domain);
@@ -308,6 +531,7 @@ class VpnController extends GetxController with WidgetsBindingObserver {
     );
 
     _db.domainAccess.add(domainAccess);
+    accessCount.value += 1; // triggers real-time rebuild in History Screen
 
     // Update today's stats
     _calculateTodayStats();

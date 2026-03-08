@@ -277,6 +277,86 @@ class FirestoreRepository extends GetxService {
     }
   }
 
+  /// Get aggregated domain stats from ALL users for admin dashboard.
+  /// Returns: category breakdown and domain list sorted by duration.
+  Future<Map<String, dynamic>> getAllUsersDomainStats({
+    int limitPerUser = 500,
+  }) async {
+    try {
+      final usersSnap = await _firestore.collection('users').get();
+      debugPrint(
+        '🔍 getAllUsersDomainStats: found ${usersSnap.docs.length} users',
+      );
+
+      final categoryMap = <String, int>{}; // category → total visits
+      final domainVisits = <String, int>{}; // domain → total visits
+      final domainDuration = <String, int>{}; // domain → total duration seconds
+      final domainCategory = <String, String>{}; // domain → category
+
+      for (final userDoc in usersSnap.docs) {
+        final accessesSnap = await _firestore
+            .collection('users')
+            .doc(userDoc.id)
+            .collection('domain_accesses')
+            .limit(limitPerUser)
+            .get();
+        debugPrint(
+          '  └─ user ${userDoc.id}: ${accessesSnap.docs.length} domain_accesses',
+        );
+
+        for (final doc in accessesSnap.docs) {
+          final data = doc.data();
+          final domain = (data['domain'] as String? ?? '').toLowerCase();
+          final category = data['category'] as String? ?? 'safe';
+          final duration = (data['durationSeconds'] as num? ?? 0).toInt();
+
+          if (domain.isEmpty) continue;
+
+          // Category breakdown
+          categoryMap[category] = (categoryMap[category] ?? 0) + 1;
+
+          // Domain aggregation
+          domainVisits[domain] = (domainVisits[domain] ?? 0) + 1;
+          domainDuration[domain] = (domainDuration[domain] ?? 0) + duration;
+          domainCategory[domain] = category; // last wins; usually consistent
+        }
+      }
+
+      // Build sorted domain list (descending by duration)
+      final domainList =
+          domainVisits.keys.map((domain) {
+            return {
+              'domain': domain,
+              'visits': domainVisits[domain] ?? 0,
+              'durationSeconds': domainDuration[domain] ?? 0,
+              'category': domainCategory[domain] ?? 'safe',
+            };
+          }).toList()..sort(
+            (a, b) => (b['durationSeconds'] as int).compareTo(
+              a['durationSeconds'] as int,
+            ),
+          );
+
+      // Category list sorted by visits descending
+      final categoryList =
+          categoryMap.entries
+              .map((e) => {'category': e.key, 'visits': e.value})
+              .toList()
+            ..sort(
+              (a, b) => (b['visits'] as int).compareTo(a['visits'] as int),
+            );
+
+      return {
+        'categoryBreakdown': categoryList,
+        'domainList': domainList,
+        'totalEntries': domainVisits.values.fold(0, (s, v) => s + v),
+      };
+    } catch (e) {
+      debugPrint('❌ getAllUsersDomainStats error: $e');
+      return {'categoryBreakdown': [], 'domainList': [], 'totalEntries': 0};
+    }
+  }
+
   /// Get user list for admin.
   Future<List<Map<String, dynamic>>> getUsers() async {
     try {

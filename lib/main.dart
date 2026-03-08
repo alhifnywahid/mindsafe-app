@@ -7,6 +7,7 @@ import 'package:mindsafe_flutter/routes/app_pages.dart';
 import 'package:mindsafe_flutter/app/controllers/theme_controller.dart';
 import 'package:mindsafe_flutter/app/controllers/language_controller.dart';
 import 'package:mindsafe_flutter/core/localization/app_translations.dart';
+import 'package:mindsafe_flutter/app/services/background_tracking_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -29,6 +30,10 @@ void main() async {
   Get.put(LanguageController(), permanent: true);
 
   await initializeDateFormatting();
+
+  // Initialize background tracking service (keeps tracking alive when app closed)
+  await initBackgroundService();
+  debugPrint('✅ Background service initialized');
 
   debugPrint('✅ Minimal init done - launching UI');
   runApp(const MindsafeApp());

@@ -59,12 +59,10 @@ Aplikasi ini dikembangkan untuk keperluan **penelitian Tugas Akhir** di bidang k
 
 | Fitur | Deskripsi |
 |-------|-----------|
-| 📊 **Dashboard Admin** | Statistik sistem: total user, total domain, aktivitas hari ini, breakdown kategori |
-| 📝 **Domain Rules** | Kelola aturan klasifikasi domain secara kustom (tambah, edit, hapus rule) |
+| 📊 **Dashboard Admin** | Statistik agregat seluruh pengguna: total user, total domain, aturan domain, skip domain, rincian kategori, dan daftar domain diurutkan berdasarkan durasi terlama |
+| 📝 **Domain Rules** | Kelola aturan klasifikasi domain secara kustom (tambah, hapus rule beserta kategorinya) |
 | 🚫 **Skip Domains** | Daftar domain yang diabaikan saat monitoring (termasuk semua subdomain) |
-| 📢 **Push Notification** | Kirim notifikasi global ke semua pengguna (info, update, warning, promo) |
-| 📋 **Audit Log** | Catatan aktivitas admin |
-| 🔄 **Version Management** | Kelola versi aplikasi dan force update |
+| 📢 **Push Notification** | Kirim notifikasi global ke semua pengguna (info, update, warning, tips) |
 
 ---
 
@@ -105,7 +103,7 @@ lib/
 │   └── services/              # Auth, VPN, Database, Classifier, Sync, Notification
 ├── routes/                    # App routing & navigation
 ├── screens/
-│   ├── admin/                 # Admin panel (Dashboard, Rules, Audit, Notif)
+│   ├── admin/                 # Admin panel (Dashboard, Rules, Notifikasi)
 │   ├── auth/                  # Login & registrasi
 │   ├── history/               # Riwayat browsing (Overview & Calendar)
 │   ├── home/                  # Home screen dengan monitoring card
@@ -262,40 +260,42 @@ Berikut adalah konfigurasi Firestore Security Rules yang digunakan. Sesuaikan em
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // User data - hanya bisa diakses oleh user yang bersangkutan
+
+    function isAdmin() {
+      return request.auth != null &&
+        request.auth.token.email == 'admin@example.com';
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null &&
+        (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null && request.auth.uid == userId;
 
       match /domain_accesses/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if request.auth != null &&
+          (request.auth.uid == userId || isAdmin());
+        allow write: if request.auth != null && request.auth.uid == userId;
       }
     }
 
-    // Admin bisa membaca data semua user
-    match /users/{userId} {
-      allow read: if request.auth != null &&
-        request.auth.token.email == 'admin@example.com';
-    }
-
-    // Domain rules - semua user bisa baca, hanya admin bisa tulis
     match /domain_rules/{ruleId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null &&
-        request.auth.token.email == 'admin@example.com';
+      allow write: if isAdmin();
     }
 
-    // Skip domains - semua user bisa baca, hanya admin bisa tulis
     match /skip_domains/{domainId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null &&
-        request.auth.token.email == 'admin@example.com';
+      allow write: if isAdmin();
     }
 
-    // App config - semua user bisa baca, hanya admin bisa tulis
     match /app_config/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null &&
-        request.auth.token.email == 'admin@example.com';
+      allow write: if isAdmin();
+    }
+
+    match /notifications/{docId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
   }
 }

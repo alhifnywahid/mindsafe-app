@@ -1,6 +1,8 @@
 package com.gopret.mindsafe
 
 import android.app.Activity
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -8,6 +10,7 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.net.VpnService
+import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
@@ -24,6 +27,59 @@ class MainActivity: FlutterActivity() {
     
     private var methodResult: MethodChannel.Result? = null
     private var pendingAllowedPackages: ArrayList<String>? = null
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        // Clear stale flutter_background_service callback handles from previous
+        // installs. If left, the plugin tries to invoke a non-existent Dart
+        // callback (onBackgroundServiceStart) and crashes on startup.
+        clearStaleBackgroundServiceData()
+
+        // Create notification channels BEFORE Flutter engine starts.
+        createNotificationChannels()
+        super.onCreate(savedInstanceState)
+    }
+
+    private fun clearStaleBackgroundServiceData() {
+        try {
+            val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+            val editor = prefs.edit()
+            // Remove all keys related to flutter_background_service
+            prefs.all.keys
+                .filter { it.contains("background_service") || it.contains("BackgroundService") }
+                .forEach { editor.remove(it) }
+            editor.apply()
+        } catch (_: Exception) {}
+    }
+
+    private fun createNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notifManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+            // Background tracking service foreground notification channel
+            if (notifManager.getNotificationChannel("mindsafe_bg_service") == null) {
+                val bgChannel = NotificationChannel(
+                    "mindsafe_bg_service",
+                    "Mindsafe Monitoring",
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = "Monitoring browser aktif di background"
+                }
+                notifManager.createNotificationChannel(bgChannel)
+            }
+
+            // Unsafe domain alert channel
+            if (notifManager.getNotificationChannel("mindsafe_unsafe_bg") == null) {
+                val unsafeChannel = NotificationChannel(
+                    "mindsafe_unsafe_bg",
+                    "Unsafe Domain Alerts",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Notifikasi domain berbahaya"
+                }
+                notifManager.createNotificationChannel(unsafeChannel)
+            }
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

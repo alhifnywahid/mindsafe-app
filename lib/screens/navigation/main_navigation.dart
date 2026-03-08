@@ -52,13 +52,12 @@ class _MainNavigationState extends State<MainNavigation> {
     final isAdmin = authService.isAdmin;
     final theme = FTheme.of(context);
 
-    // Admin: dashboard, rules, audit, notification, settings
+    // Admin: dashboard, rules, notification, settings
     // User: home, insights, history, settings
     final screens = isAdmin
         ? <Widget>[
             const AdminDashboardScreen(),
             const AdminRulesScreen(),
-            const AdminAuditScreen(),
             const AdminNotificationScreen(),
             const SettingsScreen(),
           ]
@@ -77,11 +76,6 @@ class _MainNavigationState extends State<MainNavigation> {
               'admin_dashboard'.tr,
             ),
             _NavItemData(Icons.rule_outlined, Icons.rule, 'admin_rules'.tr),
-            _NavItemData(
-              Icons.receipt_long_outlined,
-              Icons.receipt_long,
-              'admin_audit'.tr,
-            ),
             _NavItemData(
               Icons.notifications_outlined,
               Icons.notifications_active,
