@@ -30,9 +30,9 @@ jobs:
       - name: Pasang dependensi
         run: flutter pub get
 
-      - name: Hasilkan adapter Hive
-        run: dart run build_runner build --delete-conflicting-outputs
-
+      # Adapter Hive (lib/data/models/*.g.dart) sengaja ikut ter-commit.
+      # hive_generator belum kompatibel dengan versi forui yang dipakai,
+      # sehingga build_runner tidak dipasang sebagai dev_dependency.
       - name: Periksa format kode
         run: dart format --set-exit-if-changed .
 
@@ -109,9 +109,6 @@ jobs:
 
       - name: Pasang dependensi
         run: flutter pub get
-
-      - name: Hasilkan adapter Hive
-        run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Siapkan konfigurasi Firebase placeholder
         run: cp android/app/google-services.json.example android/app/google-services.json

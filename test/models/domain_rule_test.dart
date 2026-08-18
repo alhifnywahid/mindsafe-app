@@ -95,7 +95,7 @@ void main() {
 
       expect(rule.id, '');
       expect(rule.pattern, '');
-      expect(rule.category, 'unknown');
+      expect(rule.category, 'safe');
       expect(rule.priority, 0);
       expect(rule.isActive, true);
       expect(rule.isRegex, false);

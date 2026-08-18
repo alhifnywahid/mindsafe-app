@@ -120,10 +120,7 @@ cp android/app/google-services.json.example android/app/google-services.json
 # 3. Pasang dependensi
 flutter pub get
 
-# 4. Bangkitkan adapter Hive
-dart run build_runner build --delete-conflicting-outputs
-
-# 5. Jalankan dengan surel admin disuntikkan saat build
+# 4. Jalankan dengan surel admin disuntikkan saat build
 flutter run --dart-define=ADMIN_EMAIL=surel.admin.anda@gmail.com
 ```
 
@@ -298,7 +295,7 @@ Secara teknis bisa, selama berkasnya mengikuti format satu domain per baris dan 
 | **Izin VPN ditolak**                      | Android meminta persetujuan eksplisit setiap kali profil VPN dibuat. Nyalakan ulang monitoring dari dalam aplikasi dan setujui dialog sistem.  |
 | **URL browser tidak tertangkap**          | Accessibility Service harus diaktifkan manual di Settings → Accessibility → MindSafe. Sebagian ROM mematikannya kembali setelah restart.       |
 | **Blocklist tidak termuat**               | Pastikan berkas `.txt` sudah ada di `assets/blocklists/` dengan nama yang tepat (lihat [Aset Blocklist](#aset-blocklist)).                     |
-| **Error build_runner / adapter Hive**     | `dart run build_runner clean` lalu `dart run build_runner build --delete-conflicting-outputs`.                                                 |
+| **Error adapter Hive**                   | Adapter (`lib/data/models/*.g.dart`) sudah ikut di repositori dan tidak perlu dibangkitkan. Jalankan `flutter clean && flutter pub get`.        |
 | **Perilaku aneh di emulator**             | `VpnService` dan `AccessibilityService` tidak konsisten di emulator. Gunakan perangkat fisik.                                                  |
 
 ---

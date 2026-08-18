@@ -75,17 +75,14 @@ cd mindsafe-app
 # 2. Pasang dependensi
 flutter pub get
 
-# 3. Hasilkan adapter Hive
-dart run build_runner build --delete-conflicting-outputs
-
-# 4. Siapkan konfigurasi Firebase Anda sendiri
+# 3. Siapkan konfigurasi Firebase Anda sendiri
 cp android/app/google-services.json.example android/app/google-services.json
 # lalu isi dengan nilai dari Firebase Console milik Anda
 
-# 5. Unduh berkas blocklist ke assets/blocklists/
+# 4. Unduh berkas blocklist ke assets/blocklists/
 #    (lihat bagian Blocklist pada README)
 
-# 6. Jalankan aplikasi
+# 5. Jalankan aplikasi
 flutter run --dart-define=ADMIN_EMAIL=surel.admin.anda@gmail.com
 ```
 

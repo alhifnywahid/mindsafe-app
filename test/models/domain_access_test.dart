@@ -14,7 +14,7 @@ void main() {
       expect(access.timestamp, DateTime(2026, 1, 1, 12, 0));
       expect(access.userId, 'user123');
       expect(access.durationSeconds, 0); // default
-      expect(access.category, 'unknown'); // default
+      expect(access.category, 'safe'); // default
       expect(access.synced, false); // default
     });
 
@@ -86,7 +86,7 @@ void main() {
 
       expect(access.domain, 'minimal.com');
       expect(access.durationSeconds, 0);
-      expect(access.category, 'unknown');
+      expect(access.category, 'safe');
       expect(access.synced, false);
       expect(access.userId, '');
     });
