@@ -6,7 +6,7 @@
 <p align="center">
   <a href="LICENSE"><img alt="Lisensi MIT" src="https://img.shields.io/badge/lisensi-MIT-6366F1"></a>
   <img alt="Platform Android" src="https://img.shields.io/badge/platform-Android%205.0%2B-3DDC84">
-  <img alt="Flutter 3.11+" src="https://img.shields.io/badge/Flutter-3.11%2B-02569B">
+  <img alt="Flutter 3.41.x" src="https://img.shields.io/badge/Flutter-3.41.x-02569B">
   <a href="CONTRIBUTING.md"><img alt="Kontribusi diterima" src="https://img.shields.io/badge/kontribusi-diterima-8B5CF6"></a>
 </p>
 
@@ -99,12 +99,20 @@ Akun admin ditentukan dari satu alamat surel yang disuntikkan saat build (lihat 
 
 | Kebutuhan   | Versi / Catatan                                                                                                         |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Flutter SDK | ≥ 3.11.0                                                                                                                |
-| Dart SDK    | ≥ 3.11.0                                                                                                                |
+| Flutter SDK | 3.41.x (versi yang diverifikasi: **3.41.1**) - lihat catatan versi di bawah                                              |
+| Dart SDK    | ≥ 3.11.0 (ikut terpasang bersama Flutter)                                                                               |
 | JDK         | 17                                                                                                                      |
 | Android     | API 21+ (Android 5.0+)                                                                                                  |
 | Perangkat   | **Perangkat fisik sangat disarankan** - `VpnService` dan `AccessibilityService` berperilaku tidak konsisten di emulator |
 | Firebase    | Satu project Firebase milik Anda sendiri                                                                                |
+
+> **Catatan versi Flutter.** Berkas `android/gradle/wrapper/gradle-wrapper.properties`
+> menyematkan Gradle `8.12`. Flutter `3.47` ke atas mensyaratkan Gradle minimal
+> `8.14.0` dan akan menolak proses build dengan pesan _"Your project's Gradle
+> version (8.12.0) is lower than Flutter's minimum supported version of 8.14.0"_.
+> Gunakan Flutter `3.41.x` (versi yang dipakai selama pengembangan dan disematkan
+> di alur kerja CI), atau naikkan sendiri Gradle wrapper ke `8.14+` sebelum
+> memakai Flutter yang lebih baru.
 
 ### Langkah
 
@@ -296,6 +304,7 @@ Secara teknis bisa, selama berkasnya mengikuti format satu domain per baris dan 
 | **URL browser tidak tertangkap**          | Accessibility Service harus diaktifkan manual di Settings → Accessibility → MindSafe. Sebagian ROM mematikannya kembali setelah restart.       |
 | **Blocklist tidak termuat**               | Pastikan berkas `.txt` sudah ada di `assets/blocklists/` dengan nama yang tepat (lihat [Aset Blocklist](#aset-blocklist)).                     |
 | **Error adapter Hive**                   | Adapter (`lib/data/models/*.g.dart`) sudah ikut di repositori dan tidak perlu dibangkitkan. Jalankan `flutter clean && flutter pub get`.        |
+| **Versi Gradle lebih rendah dari minimum** | Pesan _"Gradle version (8.12.0) is lower than Flutter's minimum supported version of 8.14.0"_ muncul bila memakai Flutter 3.47+. Turunkan ke Flutter 3.41.x atau naikkan Gradle wrapper ke 8.14+. |
 | **Perilaku aneh di emulator**             | `VpnService` dan `AccessibilityService` tidak konsisten di emulator. Gunakan perangkat fisik.                                                  |
 
 ---

@@ -24,6 +24,10 @@ jobs:
       - name: Siapkan Flutter
         uses: subosito/flutter-action@v2
         with:
+          # Disematkan pada versi yang diverifikasi untuk proyek ini.
+          # Flutter 3.47+ mensyaratkan Gradle >= 8.14.0 sedangkan wrapper
+          # proyek masih 8.12; lihat catatan di README bagian Instalasi.
+          flutter-version: 3.41.1
           channel: stable
           cache: true
 
@@ -104,6 +108,10 @@ jobs:
       - name: Siapkan Flutter
         uses: subosito/flutter-action@v2
         with:
+          # Disematkan pada versi yang diverifikasi untuk proyek ini.
+          # Flutter 3.47+ mensyaratkan Gradle >= 8.14.0 sedangkan wrapper
+          # proyek masih 8.12; lihat catatan di README bagian Instalasi.
+          flutter-version: 3.41.1
           channel: stable
           cache: true
 

@@ -56,7 +56,7 @@ Semua bentuk berikut sangat dihargai:
 
 | Kebutuhan | Versi minimum |
 |-----------|---------------|
-| Flutter SDK | 3.11.0 |
+| Flutter SDK | 3.41.x (diverifikasi: 3.41.1) |
 | Dart SDK | 3.11.0 |
 | Android SDK | API 21 (Android 5.0) |
 | JDK | 17 |
@@ -64,6 +64,10 @@ Semua bentuk berikut sangat dihargai:
 
 > `VpnService` dan `AccessibilityService` berperilaku tidak konsisten pada
 > emulator. Verifikasi fitur pemantauan sebaiknya dilakukan di perangkat fisik.
+
+> Gradle wrapper proyek ini disematkan pada `8.12`, sedangkan Flutter `3.47+`
+> mensyaratkan Gradle `8.14.0` ke atas. Pakai Flutter `3.41.x` agar sama dengan
+> alur kerja CI, atau naikkan Gradle wrapper terlebih dahulu.
 
 ### Langkah
 

@@ -34,11 +34,26 @@ dan proyek ini menggunakan [Semantic Versioning](https://semver.org/lang/id/).
   `com.gopret.mindsafe`, alur konfigurasi baru didokumentasikan
 - `.gitignore` diperketat untuk konfigurasi Firebase, *keystore*, berkas `.env`,
   dan direktori catatan pribadi
+- Versi Flutter pada alur kerja CI disematkan ke `3.41.1` agar cocok dengan
+  Gradle wrapper `8.12`. Tanpa penyematan, `channel: stable` memasang Flutter
+  `3.47` yang mensyaratkan Gradle `8.14.0` ke atas dan menggagalkan *build* APK
+- Prasyarat versi Flutter di README dan `CONTRIBUTING.md` dipertegas menjadi
+  `3.41.x` beserta penjelasan keterkaitannya dengan versi Gradle
+- Langkah `build_runner` dihapus dari CI, README, dan `CONTRIBUTING.md` karena
+  adapter Hive (`lib/data/models/*.g.dart`) sudah ikut terlacak dan
+  `hive_generator` belum kompatibel dengan `analyzer` yang dibutuhkan `forui`
 
 ### Dihapus
 
 - `android/app/google-services.json` dikeluarkan dari pelacakan Git
 - Berkas kerja pribadi yang sebelumnya ikut terlacak
+
+### Diperbaiki
+
+- Tiga asersi pengujian di `test/models/` yang mengharapkan kategori `unknown`
+  disesuaikan menjadi `safe`, mengikuti perilaku `domain_classifier.dart`
+- Tautan *troubleshooting* pada `.github/ISSUE_TEMPLATE/config.yml` menunjuk
+  jangkar README yang benar
 
 ### Keamanan
 
