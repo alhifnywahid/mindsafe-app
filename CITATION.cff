@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: >-
+  Jika Anda menggunakan perangkat lunak ini dalam penelitian, mohon kutip
+  menggunakan metadata berikut.
+title: >-
+  MindSafe: Aplikasi Monitoring Aktivitas Akses Domain Terindikasi Pornografi
+  Berbasis Smartphone
+abstract: >-
+  MindSafe adalah aplikasi Android yang memantau dan mengklasifikasikan aktivitas
+  akses domain internet secara real-time menggunakan Local VPN (VpnService)
+  untuk intercept DNS query dan Accessibility Service untuk menangkap URL
+  browser. Klasifikasi domain memakai dataset UT1 Blocklist dari Universite
+  Toulouse 1 Capitole melalui tiga tahap: aturan kustom, daftar domain yang
+  diabaikan, lalu blocklist. Seluruh pemrosesan berjalan di perangkat, hanya
+  nama domain yang diamati, dan lalu lintas HTTPS tidak didekripsi.
+type: software
+authors:
+  - family-names: Wahid
+    given-names: Alhifny
+    affiliation: Universitas Dr. Soetomo
+license: MIT
+repository-code: "https://github.com/alhifnywahid/mindsafe-app"
+url: "https://github.com/alhifnywahid/mindsafe-app"
+version: 0.1.0
+date-released: "2026-08-19"
+keywords:
+  - internet safety
+  - domain classification
+  - dns monitoring
+  - android
+  - flutter
+  - vpnservice
+  - accessibility service
+  - digital wellbeing
+  - tugas akhir

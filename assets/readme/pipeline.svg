@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" width="1200" height="520" role="img"
+     aria-label="Alur MindSafe: DNS query dari perangkat ditangkap LocalVpnService dan URL browser ditangkap BrowserMonitorService, keduanya dikirim ke DomainClassifier yang memeriksa aturan kustom lalu daftar domain diabaikan lalu UT1 Blocklist, hasilnya disimpan di Hive lalu memicu notifikasi dan statistik, dan opsional disinkronkan ke Cloud Firestore.">
+  <title>Alur pemrosesan satu domain di MindSafe: tangkap, klasifikasi, simpan</title>
+  <defs>
+    <linearGradient id="pbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#1B2440"/>
+    </linearGradient>
+    <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#818CF8"/>
+    </marker>
+    <marker id="arwg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#5B6785"/>
+    </marker>
+    <clipPath id="pround"><rect width="1200" height="520" rx="20"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#pround)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <rect width="1200" height="520" fill="url(#pbg)"/>
+
+    <text x="48" y="56" fill="#E8ECF6" font-size="30" font-weight="700">Bagaimana satu domain diproses</text>
+    <text x="48" y="88" fill="#95A3C4" font-size="20">Semua tahap berjalan di perangkat. Yang dibaca hanya nama domain - bukan isi halaman.</text>
+
+    <!-- ============ STAGE 1: capture ============ -->
+    <g>
+      <rect x="48" y="128" width="268" height="192" rx="14" fill="#16203A" stroke="#2C3A5E" stroke-width="2"/>
+      <text x="72" y="162" fill="#818CF8" font-size="18" font-weight="700" letter-spacing="1.5">1 · TANGKAP</text>
+      <text x="72" y="196" fill="#E8ECF6" font-size="21" font-weight="600">LocalVpnService</text>
+      <text x="72" y="222" fill="#95A3C4" font-size="19">DNS query, tanpa root</text>
+      <line x1="72" y1="238" x2="292" y2="238" stroke="#2C3A5E" stroke-width="2"/>
+      <text x="72" y="266" fill="#E8ECF6" font-size="21" font-weight="600">BrowserMonitorService</text>
+      <text x="72" y="292" fill="#95A3C4" font-size="19">URL address bar browser</text>
+    </g>
+
+    <path d="M330 200 H392" stroke="#818CF8" stroke-width="2.5" marker-end="url(#arw)"/>
+
+    <!-- ============ STAGE 2: classify ============ -->
+    <g>
+      <rect x="404" y="128" width="392" height="252" rx="14" fill="#16203A" stroke="#6366F1" stroke-width="2.5"/>
+      <text x="428" y="162" fill="#818CF8" font-size="18" font-weight="700" letter-spacing="1.5">2 · KLASIFIKASI</text>
+      <text x="428" y="192" fill="#E8ECF6" font-size="21" font-weight="600">DomainClassifier</text>
+
+      <rect x="428" y="212" width="344" height="44" rx="9" fill="#1E2A47" stroke="#2C3A5E" stroke-width="1.5"/>
+      <text x="446" y="240" fill="#E8ECF6" font-size="19">a. Aturan kustom admin</text>
+      <text x="754" y="240" fill="#6EE7B7" font-size="18" text-anchor="end" font-weight="600">menang</text>
+
+      <rect x="428" y="264" width="344" height="44" rx="9" fill="#1E2A47" stroke="#2C3A5E" stroke-width="1.5"/>
+      <text x="446" y="292" fill="#E8ECF6" font-size="19">b. Daftar domain diabaikan</text>
+      <text x="754" y="292" fill="#95A3C4" font-size="18" text-anchor="end">lewati</text>
+
+      <rect x="428" y="316" width="344" height="44" rx="9" fill="#1E2A47" stroke="#2C3A5E" stroke-width="1.5"/>
+      <text x="446" y="344" fill="#E8ECF6" font-size="19">c. UT1 Blocklist</text>
+      <text x="754" y="344" fill="#95A3C4" font-size="18" text-anchor="end">11 kategori</text>
+    </g>
+
+    <path d="M810 200 H872" stroke="#818CF8" stroke-width="2.5" marker-end="url(#arw)"/>
+
+    <!-- ============ STAGE 3: store ============ -->
+    <g>
+      <rect x="884" y="128" width="268" height="192" rx="14" fill="#16203A" stroke="#2C3A5E" stroke-width="2"/>
+      <text x="908" y="162" fill="#818CF8" font-size="18" font-weight="700" letter-spacing="1.5">3 · SIMPAN</text>
+      <text x="908" y="196" fill="#E8ECF6" font-size="21" font-weight="600">Hive · lokal</text>
+      <text x="908" y="222" fill="#95A3C4" font-size="19">sumber kebenaran utama</text>
+      <line x1="908" y1="238" x2="1128" y2="238" stroke="#2C3A5E" stroke-width="2"/>
+      <text x="908" y="266" fill="#95A3C4" font-size="19">berjalan penuh saat offline</text>
+    </g>
+
+    <!-- outputs -->
+    <path d="M1018 332 V346" stroke="#5B6785" stroke-width="2.5" marker-end="url(#arwg)"/>
+    <rect x="884" y="358" width="268" height="52" rx="10" fill="#1E2A47" stroke="#2C3A5E" stroke-width="1.5"/>
+    <text x="908" y="390" fill="#E8ECF6" font-size="19">Notifikasi &amp; statistik</text>
+
+    <path d="M1018 422 V446" stroke="#5B6785" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#arwg)"/>
+    <rect x="884" y="452" width="268" height="52" rx="10" fill="#141D33" stroke="#2C3A5E" stroke-width="1.5" stroke-dasharray="7 6"/>
+    <text x="908" y="484" fill="#95A3C4" font-size="19">Firestore · opsional</text>
+
+    <!-- privacy footer note -->
+    <rect x="48" y="452" width="748" height="52" rx="10" fill="#141D33" stroke="#2C3A5E" stroke-width="1.5"/>
+    <text x="72" y="484" fill="#95A3C4" font-size="19">HTTPS tidak didekripsi · isi halaman, pesan, dan sandi tidak pernah dibaca</text>
+  </g>
+</svg>

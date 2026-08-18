@@ -1,0 +1,129 @@
+name: 🐛 Laporan Bug
+description: Laporkan perilaku yang tidak sesuai pada aplikasi MindSafe
+title: "[Bug]: "
+labels: ["bug", "perlu-triase"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Terima kasih sudah melaporkan bug.
+
+        ⚠️ **Jangan laporkan kerentanan keamanan di sini.** Gunakan
+        [Security Advisory privat](https://github.com/alhifnywahid/mindsafe-app/security/advisories/new).
+
+        ⚠️ **Sensor data sensitif.** Jangan cantumkan nama domain dewasa yang
+        utuh, alamat surel nyata, UID Firebase, atau riwayat penelusuran asli.
+
+  - type: checkboxes
+    id: prasyarat
+    attributes:
+      label: Prasyarat
+      options:
+        - label: Saya sudah mencari dan tidak menemukan issue serupa
+          required: true
+        - label: Saya sudah membaca bagian Troubleshooting pada README
+          required: true
+        - label: Laporan ini tidak memuat data pribadi atau domain dewasa yang utuh
+          required: true
+
+  - type: textarea
+    id: deskripsi
+    attributes:
+      label: Deskripsi bug
+      description: Jelaskan secara singkat dan jelas apa yang terjadi.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduksi
+    attributes:
+      label: Langkah reproduksi
+      placeholder: |
+        1. Buka halaman ...
+        2. Aktifkan VPN
+        3. Kunjungi ... dari browser
+        4. Bug muncul
+    validations:
+      required: true
+
+  - type: textarea
+    id: diharapkan
+    attributes:
+      label: Perilaku yang diharapkan
+    validations:
+      required: true
+
+  - type: textarea
+    id: aktual
+    attributes:
+      label: Perilaku yang terjadi
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area terdampak
+      options:
+        - Pemantauan VPN / DNS
+        - Penangkapan URL (Accessibility Service)
+        - Klasifikasi domain
+        - Beranda / statistik
+        - Halaman Riwayat
+        - Halaman Analisis
+        - Pengaturan
+        - Autentikasi / Google Sign-In
+        - Sinkronisasi Firestore
+        - Notifikasi
+        - Panel Admin
+        - Tema / tampilan
+        - Lain-lain
+    validations:
+      required: true
+
+  - type: input
+    id: versi-android
+    attributes:
+      label: Versi Android
+      placeholder: "Android 14"
+    validations:
+      required: true
+
+  - type: input
+    id: perangkat
+    attributes:
+      label: Model perangkat
+      placeholder: "Samsung Galaxy A54"
+    validations:
+      required: true
+
+  - type: input
+    id: versi-app
+    attributes:
+      label: Versi MindSafe
+      description: Dapat dilihat pada Pengaturan → Tentang Aplikasi
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: secure-dns
+    attributes:
+      label: Status Secure DNS (DNS over HTTPS) di browser
+      description: >
+        Bila Secure DNS aktif, DNS query melewati VPN lokal sehingga domain
+        tidak terdeteksi. Ini penyebab paling umum.
+      options:
+        - Nonaktif
+        - Aktif
+        - Tidak tahu
+        - Tidak relevan dengan bug ini
+    validations:
+      required: true
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Keluaran `flutter logs` atau `adb logcat`, dengan data pribadi disensor.
+      render: shell

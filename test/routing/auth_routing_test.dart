@@ -37,20 +37,20 @@ void main() {
   });
 
   group('Admin Role Detection', () {
-    const adminEmail = 'jackkolor69@gmail.com';
+    const adminEmail = 'admin@example.com';
 
     test('admin email matches exactly', () {
-      expect(_isAdmin('jackkolor69@gmail.com', adminEmail), true);
+      expect(_isAdmin('admin@example.com', adminEmail), true);
     });
 
     test('admin email is case-insensitive', () {
-      expect(_isAdmin('JackKolor69@Gmail.com', adminEmail), true);
-      expect(_isAdmin('JACKKOLOR69@GMAIL.COM', adminEmail), true);
+      expect(_isAdmin('Admin@Example.com', adminEmail), true);
+      expect(_isAdmin('ADMIN@EXAMPLE.COM', adminEmail), true);
     });
 
     test('non-admin email returns false', () {
       expect(_isAdmin('user@gmail.com', adminEmail), false);
-      expect(_isAdmin('admin@example.com', adminEmail), false);
+      expect(_isAdmin('someone@example.com', adminEmail), false);
     });
 
     test('null email returns false', () {

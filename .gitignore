@@ -40,13 +40,41 @@ app.*.symbols
 app.*.map.json
 
 # Blocklist files (too large for GitHub, download separately)
-assets/blocklists/
+assets/blocklists/*
+!assets/blocklists/README.md
 
 # Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile
 /android/app/release
 
-# resources
-.proposal/
+# ---------------------------------------------------------------------------
+# Kredensial & konfigurasi khusus deployment  (JANGAN pernah di-commit)
+# ---------------------------------------------------------------------------
+# Konfigurasi Firebase berisi API key dan project id milik masing-masing orang.
+# Gunakan file *.example sebagai acuan, lalu isi dengan project Firebase Anda.
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+.firebaserc
+.firebase/
+
+# Backup lokal aturan Firestore (berisi email admin asli)
+firestore.rules.local.bak
+firestore.rules.local
+
+# Keystore penandatanganan rilis Android
+*.jks
+*.keystore
+android/key.properties
+
+# Variabel lingkungan
+.env
+.env.*
+!.env.example
+
+# Catatan & berkas kerja pribadi
 .test/
+.proposal/
+.deleted/

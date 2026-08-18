@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:mindsafe_flutter/core/config/app_config.dart';
 import 'package:mindsafe_flutter/data/repositories/firestore_repository.dart';
 import 'package:mindsafe_flutter/data/services/sync_service.dart';
 
@@ -14,11 +15,18 @@ class AuthService extends GetxService {
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Admin email
-  static const String adminEmail = 'jackkolor69@gmail.com';
+  /// Email administrator, dibaca dari konfigurasi build (`--dart-define`).
+  /// Lihat `lib/core/config/app_config.dart` dan `CONTRIBUTING.md`.
+  static String get adminEmail => AppConfig.adminEmail;
 
-  bool get isAdmin =>
-      currentUser?.email?.toLowerCase() == adminEmail.toLowerCase();
+  /// Bernilai `true` hanya bila email admin sudah dikonfigurasi saat build
+  /// DAN cocok dengan email akun yang sedang masuk.
+  bool get isAdmin {
+    if (!AppConfig.hasAdminEmail) return false;
+    final email = currentUser?.email;
+    if (email == null) return false;
+    return email.toLowerCase() == adminEmail.trim().toLowerCase();
+  }
 
   Future<AuthService> init() async {
     _currentUser.value = _auth.currentUser;

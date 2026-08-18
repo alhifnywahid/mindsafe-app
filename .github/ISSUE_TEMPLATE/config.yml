@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Laporan Kerentanan Keamanan
+    url: https://github.com/alhifnywahid/mindsafe-app/security/advisories/new
+    about: Laporkan kerentanan secara privat, jangan melalui issue publik.
+  - name: 💬 Pertanyaan & Diskusi
+    url: https://github.com/alhifnywahid/mindsafe-app/discussions
+    about: Ajukan pertanyaan penggunaan atau diskusi umum di sini.
+  - name: 🛠️ Panduan Troubleshooting
+    url: https://github.com/alhifnywahid/mindsafe-app#-troubleshooting
+    about: Periksa dahulu solusi untuk masalah yang paling sering terjadi.

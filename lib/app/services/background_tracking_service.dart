@@ -50,7 +50,7 @@ Future<List<Map<String, dynamic>>> consumePendingUrls() async {
   return results;
 }
 
-/// Stub — no longer needed, but kept for API compatibility.
+/// Stub - no longer needed, but kept for API compatibility.
 Future<void> initBackgroundService() async {
   // No-op: background tracking is now handled natively by
   // BrowserMonitorService.kt + consume-on-resume in VpnController.

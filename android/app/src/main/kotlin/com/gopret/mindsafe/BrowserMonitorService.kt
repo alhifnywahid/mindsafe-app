@@ -141,7 +141,7 @@ class BrowserMonitorService : AccessibilityService() {
             url = "https://$url"
         }
 
-        // Quick host validation — reject clearly invalid input immediately
+        // Quick host validation - reject clearly invalid input immediately
         val host = try { java.net.URI(url).host ?: "" } catch (_: Exception) { "" }
         if (host.isEmpty() || !host.contains('.')) return
         if (host.substringAfterLast('.').length < 2) return

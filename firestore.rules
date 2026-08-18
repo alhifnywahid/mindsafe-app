@@ -1,10 +1,23 @@
+// MindSafe - Cloud Firestore Security Rules
+//
+// PENTING: ganti 'ganti-dengan-email-admin@example.com' di bawah dengan email
+// Google Anda sendiri, dan pastikan nilainya SAMA dengan yang Anda berikan saat
+// build aplikasi:
+//
+//   flutter run --dart-define=ADMIN_EMAIL=email.anda@gmail.com
+//
+// Bila keduanya tidak sama, panel admin akan tampil di aplikasi namun semua
+// operasi tulisnya ditolak oleh server.
+//
+// Deploy:  firebase deploy --only firestore:rules
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAdmin() {
       return request.auth != null &&
-        request.auth.token.email == 'jackkolor69@gmail.com';
+        request.auth.token.email == 'ganti-dengan-email-admin@example.com';
     }
 
     match /users/{userId} {

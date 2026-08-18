@@ -1,0 +1,25 @@
+name: 📚 Perbaikan Dokumentasi
+description: Laporkan dokumentasi yang salah, membingungkan, atau belum lengkap
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: input
+    id: lokasi
+    attributes:
+      label: Lokasi dokumentasi
+      description: Nama berkas dan bagian, atau tautan langsung.
+      placeholder: "README.md → Konfigurasi Firebase"
+    validations:
+      required: true
+
+  - type: textarea
+    id: masalah
+    attributes:
+      label: Apa yang salah atau membingungkan
+    validations:
+      required: true
+
+  - type: textarea
+    id: usulan
+    attributes:
+      label: Usulan perbaikan

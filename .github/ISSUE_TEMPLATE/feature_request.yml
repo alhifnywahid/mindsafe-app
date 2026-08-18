@@ -1,0 +1,69 @@
+name: 💡 Usulan Fitur
+description: Usulkan fitur atau peningkatan untuk MindSafe
+title: "[Fitur]: "
+labels: ["enhancement", "perlu-triase"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        MindSafe adalah proyek penelitian Tugas Akhir dengan cakupan yang sudah
+        ditetapkan. Usulan yang baik secara teknis tetap mungkin ditolak bila
+        keluar dari batasan penelitian. Mohon tunggu tanggapan pengelola
+        sebelum mengerjakan fitur besar.
+
+  - type: checkboxes
+    id: prasyarat
+    attributes:
+      label: Prasyarat
+      options:
+        - label: Saya sudah mencari dan tidak menemukan usulan serupa
+          required: true
+        - label: >
+            Usulan ini tidak meminta pendekripsian lalu lintas HTTPS, pembacaan
+            konten halaman, atau klaim diagnosis/terapi
+          required: true
+
+  - type: textarea
+    id: masalah
+    attributes:
+      label: Masalah yang ingin diselesaikan
+      description: Jelaskan masalahnya, bukan hanya solusinya.
+      placeholder: "Saat ini saya kesulitan ... karena ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solusi
+    attributes:
+      label: Solusi yang diusulkan
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatif
+    attributes:
+      label: Alternatif yang sudah dipertimbangkan
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area terkait
+      options:
+        - Pemantauan & klasifikasi
+        - Statistik & visualisasi
+        - Antarmuka & pengalaman pengguna
+        - Privasi & keamanan
+        - Panel Admin
+        - Lokalisasi / terjemahan
+        - Aksesibilitas
+        - Dokumentasi
+        - Lain-lain
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: kontribusi
+    attributes:
+      label: Kesediaan berkontribusi
+      options:
+        - label: Saya bersedia mengerjakan fitur ini bila usulan disetujui

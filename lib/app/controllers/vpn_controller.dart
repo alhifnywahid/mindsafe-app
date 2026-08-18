@@ -261,7 +261,7 @@ class VpnController extends GetxController with WidgetsBindingObserver {
             // Accessibility-first: if Accessibility Service is active,
             // it already captures exactly what the user visits in the browser
             // URL bar. VPN captures ALL DNS requests including CDN, trackers,
-            // and background requests — which are noise, not user intent.
+            // and background requests - which are noise, not user intent.
             // → Only use VPN events as fallback when Accessibility is NOT active.
             if (isAccessibilityEnabled.value) break;
 
@@ -374,7 +374,7 @@ class VpnController extends GetxController with WidgetsBindingObserver {
         durationOverride: 0,
       );
     }
-    // Same domain as before: session is still open — nothing to do.
+    // Same domain as before: session is still open - nothing to do.
   }
 
   /// Closes the active Accessibility session and saves the accumulated duration.

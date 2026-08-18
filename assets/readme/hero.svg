@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 460" width="1200" height="460" role="img" aria-label="MindSafe - memantau dan mengklasifikasikan domain yang diakses di Android secara real-time, sepenuhnya di perangkat, tanpa mendekripsi konten HTTPS.">
+  <title>MindSafe - pemantauan domain di perangkat untuk Android</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#1B2440"/>
+    </linearGradient>
+    <linearGradient id="tunnel" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6366F1" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#818CF8" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#6366F1" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="round"><rect width="1200" height="460" rx="20"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#round)">
+    <rect width="1200" height="460" fill="url(#bg)"/>
+
+    <!-- faint packet grid: the DNS stream motif -->
+    <g opacity="0.13" fill="none" stroke="#818CF8" stroke-width="1">
+      <path d="M0 78 H1200 M0 150 H1200 M0 222 H1200 M0 294 H1200 M0 366 H1200"/>
+    </g>
+    <g opacity="0.5" fill="#6366F1">
+      <rect x="96" y="404" width="26" height="6" rx="3"/>
+      <rect x="140" y="404" width="14" height="6" rx="3"/>
+      <rect x="172" y="404" width="34" height="6" rx="3"/>
+      <rect x="224" y="404" width="10" height="6" rx="3"/>
+    </g>
+
+    <!-- ============ LEFT: identity ============ -->
+    <g transform="translate(72 62)">
+      <!-- shield + pulse mark -->
+      <g transform="translate(0 4)">
+        <path d="M30 0 L60 11 V37 C60 53 47 64 30 71 C13 64 0 53 0 37 V11 Z"
+              fill="#6366F1" stroke="#A5B4FC" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M11 36 H21 L26 25 L33 48 L39 36 H49"
+              fill="none" stroke="#F8FAFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+
+      <text x="78" y="38" font-family="'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+            font-size="56" font-weight="800" fill="#F8FAFF" letter-spacing="-1.5">MindSafe</text>
+      <text x="80" y="68" font-family="ui-monospace,'Cascadia Mono','Consolas',monospace"
+            font-size="20" fill="#818CF8" letter-spacing="1.4">ANDROID · LOCAL VPN · ON-DEVICE</text>
+
+      <text x="0" y="128" font-family="'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+            font-size="27" font-weight="600" fill="#E2E8F5">Pantau &amp; klasifikasikan domain yang diakses</text>
+      <text x="0" y="164" font-family="'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+            font-size="27" font-weight="600" fill="#E2E8F5">secara <tspan fill="#34D399">real-time</tspan> - tanpa membaca isi halaman.</text>
+
+      <!-- three factual chips -->
+      <g font-family="ui-monospace,'Cascadia Mono','Consolas',monospace" font-size="19">
+        <g transform="translate(0 200)">
+          <rect width="196" height="42" rx="21" fill="#1E293B" stroke="#334155" stroke-width="1.5"/>
+          <circle cx="26" cy="21" r="5" fill="#34D399"/>
+          <text x="44" y="28" fill="#CBD5E1">11 kategori</text>
+        </g>
+        <g transform="translate(210 200)">
+          <rect width="182" height="42" rx="21" fill="#1E293B" stroke="#334155" stroke-width="1.5"/>
+          <circle cx="26" cy="21" r="5" fill="#818CF8"/>
+          <text x="44" y="28" fill="#CBD5E1">offline-first</text>
+        </g>
+        <g transform="translate(406 200)">
+          <rect width="196" height="42" rx="21" fill="#1E293B" stroke="#334155" stroke-width="1.5"/>
+          <circle cx="26" cy="21" r="5" fill="#F59E0B"/>
+          <text x="44" y="28" fill="#CBD5E1">tanpa root</text>
+        </g>
+      </g>
+
+      <!-- first command: the shortest path to first use -->
+      <g transform="translate(0 272)">
+        <rect width="602" height="52" rx="10" fill="#111A2E" stroke="#2F3D5C" stroke-width="1.5"/>
+        <text x="20" y="33" font-family="ui-monospace,'Cascadia Mono','Consolas',monospace"
+              font-size="20" fill="#64748B">$</text>
+        <text x="44" y="33" font-family="ui-monospace,'Cascadia Mono','Consolas',monospace"
+              font-size="20" fill="#A5B4FC">flutter run</text>
+        <text x="176" y="33" font-family="ui-monospace,'Cascadia Mono','Consolas',monospace"
+              font-size="20" fill="#94A3B8">--dart-define=ADMIN_EMAIL=…</text>
+      </g>
+    </g>
+
+    <!-- ============ RIGHT: real event stream ============ -->
+    <g transform="translate(716 62)">
+      <rect width="412" height="336" rx="14" fill="#0B1120" stroke="#2F3D5C" stroke-width="1.5"/>
+
+      <!-- window chrome -->
+      <g transform="translate(18 22)">
+        <circle cx="0" cy="0" r="5.5" fill="#EF4444"/>
+        <circle cx="19" cy="0" r="5.5" fill="#F59E0B"/>
+        <circle cx="38" cy="0" r="5.5" fill="#34D399"/>
+        <text x="66" y="6" font-family="ui-monospace,'Cascadia Mono','Consolas',monospace"
+              font-size="18" fill="#64748B">DNS · UDP 53</text>
+      </g>
+      <path d="M1 44 H411" stroke="#1E293B" stroke-width="1.5"/>
+
+      <!-- the tunnel the packets travel through -->
+      <rect x="20" y="60" width="372" height="3" fill="url(#tunnel)"/>
+
+      <g font-family="ui-monospace,'Cascadia Mono','Consolas',monospace" font-size="19">
+        <!-- safe -->
+        <g transform="translate(22 92)">
+          <rect width="368" height="52" rx="9" fill="#111A2E"/>
+          <rect width="4" height="52" rx="2" fill="#34D399"/>
+          <text x="20" y="23" fill="#E2E8F5">tribunnews.com</text>
+          <text x="20" y="44" fill="#34D399" font-size="18">safe</text>
+          <text x="290" y="44" fill="#475569" font-size="18">18 s</text>
+        </g>
+        <!-- flagged -->
+        <g transform="translate(22 156)">
+          <rect width="368" height="52" rx="9" fill="#1F1424"/>
+          <rect width="4" height="52" rx="2" fill="#EF4444"/>
+          <text x="20" y="23" fill="#E2E8F5">••••••.com</text>
+          <text x="20" y="44" fill="#F87171" font-size="18">adult · UT1</text>
+          <text x="290" y="44" fill="#475569" font-size="18">40 s</text>
+        </g>
+        <!-- notification fired -->
+        <g transform="translate(22 220)">
+          <rect width="368" height="52" rx="9" fill="#111A2E" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="5 4"/>
+          <text x="20" y="23" fill="#FBBF24" font-size="18">⚠ Website Tidak Aman</text>
+          <text x="20" y="44" fill="#94A3B8" font-size="18">notifikasi dikirim</text>
+        </g>
+      </g>
+
+      <text x="22" y="306" font-family="ui-monospace,'Cascadia Mono','Consolas',monospace"
+            font-size="18" fill="#475569">nama domain saja · HTTPS tidak didekripsi</text>
+    </g>
+  </g>
+</svg>

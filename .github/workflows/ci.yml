@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-test:
+    name: Analisis & Pengujian
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Siapkan Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Pasang dependensi
+        run: flutter pub get
+
+      - name: Hasilkan adapter Hive
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Periksa format kode
+        run: dart format --set-exit-if-changed .
+
+      - name: Analisis statis
+        run: flutter analyze --no-fatal-infos
+
+      - name: Jalankan pengujian unit
+        run: flutter test --reporter expanded
+
+  secret-scan:
+    name: Pemeriksaan Berkas Sensitif
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Pastikan berkas kredensial tidak ter-commit
+        run: |
+          set -e
+          TERLARANG="
+          android/app/google-services.json
+          ios/Runner/GoogleService-Info.plist
+          macos/Runner/GoogleService-Info.plist
+          lib/firebase_options.dart
+          android/key.properties
+          "
+          GAGAL=0
+          for berkas in $TERLARANG; do
+            if git ls-files --error-unmatch "$berkas" > /dev/null 2>&1; then
+              echo "::error file=$berkas::Berkas kredensial ini tidak boleh di-commit."
+              GAGAL=1
+            fi
+          done
+          if git ls-files | grep -Ei '\.(jks|keystore)$|^\.env$|^\.env\.' | grep -v '\.env\.example'; then
+            echo "::error::Ditemukan keystore atau berkas .env yang ter-commit."
+            GAGAL=1
+          fi
+          exit $GAGAL
+
+      - name: Pastikan tidak ada kunci API Google di dalam kode
+        run: |
+          if grep -rInE 'AIza[0-9A-Za-z_-]{30,}' \
+               --include='*.dart' --include='*.kt' --include='*.json' \
+               --include='*.yaml' --include='*.gradle' --include='*.kts' \
+               --exclude='*.example' . ; then
+            echo "::error::Terdeteksi kunci API Google di dalam kode."
+            exit 1
+          fi
+          echo "Bersih: tidak ada kunci API yang ter-hardcode."
+
+  build-apk:
+    name: Build APK Debug
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [analyze-and-test]
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Siapkan JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Siapkan Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Pasang dependensi
+        run: flutter pub get
+
+      - name: Hasilkan adapter Hive
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Siapkan konfigurasi Firebase placeholder
+        run: cp android/app/google-services.json.example android/app/google-services.json
+
+      - name: Siapkan folder blocklist placeholder
+        run: |
+          for kategori in adult cryptojacking dangerius dating ddos \
+                          gambling hacking malware phishing warez; do
+            printf 'contoh-%s.test\n' "$kategori" > "assets/blocklists/$kategori.txt"
+          done
+
+      - name: Build APK debug
+        run: flutter build apk --debug

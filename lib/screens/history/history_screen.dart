@@ -605,7 +605,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                 }
               }
             } catch (_) {
-              // VpnController not available — skip live injection
+              // VpnController not available - skip live injection
             }
 
             final sorted = domainStats.entries.toList()
