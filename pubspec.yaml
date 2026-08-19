@@ -27,7 +27,7 @@ dependencies:
   fl_chart: ^0.69.2
   
   # UI
-  forui: ^0.18.0
+  forui: ^0.25.0
   flutter_svg: ^2.0.16
   shimmer: ^3.0.0
   
