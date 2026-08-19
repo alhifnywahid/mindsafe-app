@@ -22,6 +22,7 @@ Aplikasi ini dibangun sebagai artefak **penelitian Tugas Akhir** di bidang keama
 - [Yang Bisa Dilakukan](#yang-bisa-dilakukan)
 - [Instalasi](#instalasi)
 - [Konfigurasi Firebase](#konfigurasi-firebase)
+- [Menandatangani Build Rilis](#menandatangani-build-rilis)
 - [Aset Blocklist](#aset-blocklist)
 - [Firestore Security Rules](#firestore-security-rules)
 - [Batasan yang Diketahui](#batasan-yang-diketahui)
@@ -164,6 +165,36 @@ flutter build apk --release --dart-define=ADMIN_EMAIL=surel.admin.anda@gmail.com
 ```
 
 Bila `ADMIN_EMAIL` tidak diberikan, tidak ada akun yang dianggap admin dan panel admin tetap tertutup - build tetap berhasil. Surel yang sama **harus** dipakai di Firestore Security Rules, karena sisi klien hanya mengatur tampilan; otorisasi sebenarnya ditegakkan oleh Firestore.
+
+---
+
+## Menandatangani Build Rilis
+
+APK rilis ditandatangani memakai keystore yang dibaca dari `android/key.properties`.
+Berkas keystore (`*.jks`) dan `key.properties` **tidak** ikut di repositori, jadi
+setiap orang yang ingin membuat build rilis perlu menyiapkan keystore sendiri.
+
+```bash
+# 1. Buat keystore (sekali saja, simpan cadangannya di tempat aman)
+keytool -genkeypair \
+  -keystore android/app/mindsafe-release.jks \
+  -storetype PKCS12 -keyalg RSA -keysize 2048 -validity 10950 \
+  -alias mindsafe
+
+# 2. Salin templat lalu isi kata sandinya
+cp android/key.properties.example android/key.properties
+
+# 3. Bangun APK rilis yang tertandatangani
+flutter build apk --release --dart-define=ADMIN_EMAIL=surel.admin.anda@gmail.com
+```
+
+Bila `android/key.properties` tidak ada, build rilis tetap berjalan namun jatuh
+kembali ke kunci debug - praktis untuk kontributor yang hanya perlu menguji, tapi
+APK-nya tidak layak didistribusikan.
+
+> **Kehilangan keystore berarti kehilangan jalur pembaruan.** Android menolak
+> memasang pembaruan yang ditandatangani kunci berbeda. Simpan berkas `.jks`
+> beserta kata sandinya di luar repositori.
 
 ---
 

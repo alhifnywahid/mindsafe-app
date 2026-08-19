@@ -90,6 +90,15 @@ cp android/app/google-services.json.example android/app/google-services.json
 flutter run --dart-define=ADMIN_EMAIL=surel.admin.anda@gmail.com
 ```
 
+Untuk membuat APK rilis yang tertandatangani, siapkan keystore terlebih dahulu:
+
+```bash
+keytool -genkeypair -keystore android/app/mindsafe-release.jks \
+  -storetype PKCS12 -keyalg RSA -keysize 2048 -validity 10950 -alias mindsafe
+cp android/key.properties.example android/key.properties   # lalu isi sandinya
+flutter build apk --release --dart-define=ADMIN_EMAIL=surel.admin.anda@gmail.com
+```
+
 ### Menjalankan tanpa panel admin
 
 Jika Anda tidak membutuhkan panel administrator, jalankan tanpa `--dart-define`.

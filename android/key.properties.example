@@ -1,0 +1,14 @@
+# Salin berkas ini menjadi android/key.properties lalu isi dengan nilai
+# keystore Anda sendiri. Berkas key.properties dan *.jks TIDAK ikut
+# di-commit (lihat .gitignore).
+#
+# Membuat keystore baru:
+#   keytool -genkeypair -keystore android/app/mindsafe-release.jks \
+#     -storetype PKCS12 -keyalg RSA -keysize 2048 -validity 10950 \
+#     -alias mindsafe
+#
+# storeFile relatif terhadap direktori android/app/.
+storePassword=KATA_SANDI_KEYSTORE
+keyPassword=KATA_SANDI_KUNCI
+keyAlias=mindsafe
+storeFile=mindsafe-release.jks

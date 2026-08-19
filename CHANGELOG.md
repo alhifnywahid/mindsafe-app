@@ -7,6 +7,8 @@ dan proyek ini menggunakan [Semantic Versioning](https://semver.org/lang/id/).
 
 ## [Belum Dirilis]
 
+## [1.1.0] - 2026-08-19
+
 ### Ditambahkan
 
 - Berkas kesehatan komunitas untuk keperluan sumber terbuka:
@@ -22,6 +24,12 @@ dan proyek ini menggunakan [Semantic Versioning](https://semver.org/lang/id/).
 - Logo aplikasi (`assets/icons/mindsafe-logo.svg` dan `.png`)
 - Halaman pengalihan GitHub Pages di `docs/index.html`
 - Panduan folder blocklist di `assets/blocklists/README.md`
+- Konfigurasi penandatanganan rilis: `android/key.properties` dibaca oleh
+  `android/app/build.gradle.kts`, dengan `android/key.properties.example`
+  sebagai templat. Build rilis tanpa keystore tetap berjalan memakai kunci
+  debug agar kontributor tidak terhalang
+- Bagian "Menandatangani Build Rilis" di README beserta panduan singkatnya
+  di `CONTRIBUTING.md`
 
 ### Diubah
 
@@ -42,6 +50,10 @@ dan proyek ini menggunakan [Semantic Versioning](https://semver.org/lang/id/).
 - Langkah `build_runner` dihapus dari CI, README, dan `CONTRIBUTING.md` karena
   adapter Hive (`lib/data/models/*.g.dart`) sudah ikut terlacak dan
   `hive_generator` belum kompatibel dengan `analyzer` yang dibutuhkan `forui`
+- Nomor versi diselaraskan menjadi `1.1.0` di `pubspec.yaml` (`1.1.0+2`) dan
+  `CITATION.cff`. Sebelumnya berkas proyek menuliskan `0.1.0` sementara rilis
+  publik sudah bertag `v1.0.0`
+- APK rilis tidak lagi ditandatangani kunci debug
 
 ### Dihapus
 
@@ -54,6 +66,8 @@ dan proyek ini menggunakan [Semantic Versioning](https://semver.org/lang/id/).
   disesuaikan menjadi `safe`, mengikuti perilaku `domain_classifier.dart`
 - Tautan *troubleshooting* pada `.github/ISSUE_TEMPLATE/config.yml` menunjuk
   jangkar README yang benar
+- Tautan pembanding versi di kaki berkas ini: `[0.1.0]` yang mengarah ke tag
+  `v0.1.0` (tidak pernah ada, menghasilkan 404) diganti menjadi `[1.0.0]`
 
 ### Keamanan
 
@@ -61,7 +75,11 @@ dan proyek ini menggunakan [Semantic Versioning](https://semver.org/lang/id/).
   `firestore.rules`, dan berkas pengujian telah diganti placeholder
 - Konfigurasi Firebase tidak lagi ikut di-*commit*
 
-## [0.1.0] - 2026-03-08
+## [1.0.0] - 2026-02-22
+
+Rilis publik pertama. Tag `v1.0.0` di GitHub menunjuk ke rilis ini. Berkas
+proyek sebelumnya masih menuliskan `0.1.0`; ketidaksesuaian tersebut
+diselaraskan pada 1.1.0.
 
 ### Ditambahkan
 
@@ -87,5 +105,6 @@ dan proyek ini menggunakan [Semantic Versioning](https://semver.org/lang/id/).
 - Onboarding pengguna baru dan halaman *splash*
 - Lisensi MIT
 
-[Belum Dirilis]: https://github.com/alhifnywahid/mindsafe-app/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/alhifnywahid/mindsafe-app/releases/tag/v0.1.0
+[Belum Dirilis]: https://github.com/alhifnywahid/mindsafe-app/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/alhifnywahid/mindsafe-app/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/alhifnywahid/mindsafe-app/releases/tag/v1.0.0
