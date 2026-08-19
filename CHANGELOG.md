@@ -68,6 +68,8 @@ dan proyek ini menggunakan [Semantic Versioning](https://semver.org/lang/id/).
   jangkar README yang benar
 - Tautan pembanding versi di kaki berkas ini: `[0.1.0]` yang mengarah ke tag
   `v0.1.0` (tidak pernah ada, menghasilkan 404) diganti menjadi `[1.0.0]`
+- Baris *troubleshooting* untuk bug kompilasi inkremental Kotlin 2.4.x di
+  Windows (`Could not close incremental caches`) beserta jalan keluarnya
 
 ### Keamanan
 

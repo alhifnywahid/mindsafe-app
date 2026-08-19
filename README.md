@@ -335,6 +335,7 @@ Secara teknis bisa, selama berkasnya mengikuti format satu domain per baris dan 
 | **URL browser tidak tertangkap**          | Accessibility Service harus diaktifkan manual di Settings → Accessibility → MindSafe. Sebagian ROM mematikannya kembali setelah restart.       |
 | **Blocklist tidak termuat**               | Pastikan berkas `.txt` sudah ada di `assets/blocklists/` dengan nama yang tepat (lihat [Aset Blocklist](#aset-blocklist)).                     |
 | **Error adapter Hive**                   | Adapter (`lib/data/models/*.g.dart`) sudah ikut di repositori dan tidak perlu dibangkitkan. Jalankan `flutter clean && flutter pub get`.        |
+| **`Could not close incremental caches` saat build rilis di Windows** | Bug kompilasi inkremental Kotlin 2.4.x di Windows, bukan galat kode. Jalankan ulang dengan `flutter build apk --release -Pkotlin.incremental=false`. |
 | **Versi Gradle lebih rendah dari minimum** | Pesan _"Gradle version (8.12.0) is lower than Flutter's minimum supported version of 8.14.0"_ muncul bila memakai Flutter 3.47+. Turunkan ke Flutter 3.41.x atau naikkan Gradle wrapper ke 8.14+. |
 | **Perilaku aneh di emulator**             | `VpnService` dan `AccessibilityService` tidak konsisten di emulator. Gunakan perangkat fisik.                                                  |
 
